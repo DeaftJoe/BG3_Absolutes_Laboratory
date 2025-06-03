@@ -107,16 +107,20 @@ end
 ---@generic K
 ---@generic V
 ---@param t table<K,V>
----@param keyTransformFunc (fun(key: string):any)?
----@return fun(table: table<K, V>, index?: K):K, V
+---@param keyTransformFunc (fun(key: string, value: V):any)?
+---@return fun(table: table<K, V>, index?: K):K,V
 function TableUtils:OrderedPairs(t, keyTransformFunc)
 	local keys = {}
 	for k in pairs(t) do
 		table.insert(keys, k)
 	end
 	table.sort(keys, function(a, b)
-		local keyA = keyTransformFunc and keyTransformFunc(a) or tostring(a)
-		local keyB = keyTransformFunc and keyTransformFunc(b) or tostring(b)
+		local keyA = keyTransformFunc and keyTransformFunc(a, t[a]) or a
+		local keyB = keyTransformFunc and keyTransformFunc(b, t[b]) or b
+		if type(keyA) ~= type(keyB) then
+			keyA = tostring(keyA)
+			keyB = tostring(keyB)
+		end
 		return keyA < keyB
 	end)
 
@@ -136,6 +140,9 @@ end
 ---@param str string|fun(value: V): boolean
 ---@return K?
 function TableUtils:IndexOf(list, str)
+	if not list then
+		return
+	end
 	for i, value in pairs(list) do
 		if type(str) == "string" then
 			if value == str then
@@ -147,6 +154,25 @@ function TableUtils:IndexOf(list, str)
 			end
 		end
 	end
+end
+
+--- Reindexes a table with numeric keys so they increment sequentially from 1, modifying the input table in-place
+---@param tbl table
+---@return table
+function TableUtils:ReindexNumericTable(tbl)
+	local values = {}
+	for _, value in pairs(tbl) do
+		table.insert(values, value)
+	end
+	-- Clear the original table
+	for k in pairs(tbl) do
+		tbl[k] = nil
+	end
+	-- Reinsert values with sequential numeric keys
+	for i, value in ipairs(values) do
+		tbl[i] = value
+	end
+	return tbl
 end
 
 --- Returns a pairs()-like iterator that iterates over multiple tables sequentially

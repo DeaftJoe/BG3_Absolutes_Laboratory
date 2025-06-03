@@ -39,7 +39,7 @@ function EntityManager:RenderDisplayableValue(parent, resourceValue, resourceTyp
 			if (type(resourceValue) == "string" and resourceValue ~= "" and resourceValue ~= "00000000-0000-0000-0000-000000000000")
 				or (type(resourceValue) == "number" and resourceValue > 0)
 			then
-				parent:AddText(tostring(resourceValue))
+				Styler:SelectableText(parent, resourceType, tostring(resourceValue))
 			elseif type(resourceValue) == "table" then
 				Styler:SimpleRecursiveTwoColumnTable(parent, resourceValue, resourceType)
 			end
@@ -55,6 +55,5 @@ Ext.Require("Client/Inspector/EntityProcessors/Proxies/Entity.lua")
 Ext.Require("Client/Inspector/EntityProcessors/Proxies/ActionResources.lua")
 Ext.Require("Client/Inspector/EntityProcessors/Proxies/BoostContainers.lua")
 Ext.Require("Client/Inspector/EntityProcessors/Proxies/PassiveContainer.lua")
-Ext.Require("Client/Inspector/EntityProcessors/Proxies/ProgressionContainer.lua")
 Ext.Require("Client/Inspector/EntityProcessors/Proxies/DisplayStrings.lua")
 Ext.Require("Client/Inspector/EntityProcessors/Proxies/SpellBook.lua")

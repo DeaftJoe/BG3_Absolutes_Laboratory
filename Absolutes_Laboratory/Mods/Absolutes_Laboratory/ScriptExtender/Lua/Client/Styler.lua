@@ -84,14 +84,31 @@ function Styler:TwoColumnTable(parent, id)
 end
 
 ---@param parent ExtuiTreeParent
+---@return number
+local function countNumberOfChildrenInTree(parent)
+	local counter = 0
+
+	pcall(function()
+		local maxChildren = 0
+		for _, child in pairs(parent.Children) do
+			if child.UserData ~= "collapsed" then
+				local children = countNumberOfChildrenInTree(child.UserData == "row" and child.Children[2] or child)
+				counter = counter + 1
+				if children > maxChildren then
+					maxChildren = children
+				end
+			end
+		end
+		counter = counter + maxChildren
+	end)
+
+	return counter
+end
+
+---@param parent ExtuiTreeParent
 ---@param resource Resource
 ---@param resourceType string?
 function Styler:SimpleRecursiveTwoColumnTable(parent, resource, resourceType)
-	if TableUtils:CountElements(resource) >= 10 then
-		parent = parent:AddCollapsingHeader(resourceType or "")
-		parent:SetColor("Header", { 1, 1, 1, 0 })
-	end
-
 	local subTable = Styler:TwoColumnTable(parent)
 	subTable.Borders = false
 	subTable.BordersInnerH = true
@@ -99,6 +116,7 @@ function Styler:SimpleRecursiveTwoColumnTable(parent, resource, resourceType)
 		return tonumber(key) or key
 	end) do
 		local row = subTable:AddRow()
+		row.UserData = "row"
 
 		if type(value) == "table" then
 			row:AddCell():AddText(tostring(key))
@@ -113,7 +131,7 @@ function Styler:SimpleRecursiveTwoColumnTable(parent, resource, resourceType)
 			local displayCell = row:AddCell()
 			EntityManager:RenderDisplayableValue(displayCell, value, key)
 			if #displayCell.Children == 0 then
-				displayCell:AddText(tostring(value))
+				Styler:SelectableText(displayCell, resourceType, tostring(value))
 			end
 		else
 			row:Destroy()
@@ -122,7 +140,26 @@ function Styler:SimpleRecursiveTwoColumnTable(parent, resource, resourceType)
 
 	if #subTable.Children == 0 then
 		subTable:Destroy()
+	elseif parent.UserData ~= "collapsed" and countNumberOfChildrenInTree(subTable) >= 15 then
+		parent:DetachChild(subTable)
+		parent = parent:AddCollapsingHeader(resourceType or parent.Label or parent.IDContext or "")
+		parent.UserData = "collapsed"
+		parent:AttachChild(subTable)
+		parent:SetColor("Header", { 1, 1, 1, 0 })
 	end
+end
+
+---@param parent ExtuiTreeParent
+---@param id string?
+---@param text string
+---@return ExtuiInputText
+function Styler:SelectableText(parent, id, text)
+	local inputText = parent:AddInputText("##" .. (id or text), tostring(text))
+	inputText.AutoSelectAll = true
+	inputText.ItemReadOnly = true
+	inputText.SizeHint = { #text * 15, 0 }
+	inputText:SetColor("FrameBg", { 1, 1, 1, 0 })
+	return inputText
 end
 
 function Styler:ScaleFactor()
@@ -134,7 +171,7 @@ end
 ---@param text string
 ---@param tooltipCallback fun(parent: ExtuiTreeParent)
 ---@param freeSize boolean?
----@return ExtuiSelectable
+---@return ExtuiSelectable|ExtuiTextLink
 function Styler:HyperlinkText(parent, text, tooltipCallback, freeSize)
 	local fakeTextSelectable
 	if Ext.Utils.Version() >= 25 then
@@ -154,47 +191,74 @@ function Styler:HyperlinkText(parent, text, tooltipCallback, freeSize)
 		fakeTextSelectable:SetColor("Text", { 173 / 255, 216 / 255, 230 / 255, 1 })
 	end
 
-	---@type ExtuiTooltip?
-	local tooltip
+	fakeTextSelectable.OnClick = self:HyperlinkRenderable(fakeTextSelectable, text, nil, nil, nil, tooltipCallback)
+
+	return fakeTextSelectable
+end
+
+---@param renderable ExtuiStyledRenderable
+---@param item string
+---@param modifier InputModifier?
+---@param modifierOnHover boolean?
+---@param callback fun(parent: ExtuiTreeParent)
+---@param altTooltip string?
+---@return fun():boolean?
+function Styler:HyperlinkRenderable(renderable, item, modifier, modifierOnHover, altTooltip, callback)
+	---@type ExtuiTooltip
+	local tooltip = renderable:Tooltip()
 
 	---@type ExtuiWindow?
 	local window
 
-	fakeTextSelectable.OnHoverEnter = function()
-		if not window then
-			if not tooltip then
-				tooltip = fakeTextSelectable:Tooltip()
-				tooltipCallback(tooltip)
-			end
+	renderable.OnHoverEnter = function()
+		if not modifier or not modifierOnHover or Ext.ClientInput.GetInputManager().PressedModifiers == modifier then
+			Ext.Timer.WaitFor(modifierOnHover and 0 or 400, function()
+				if not window then
+					Helpers:KillChildren(tooltip)
+					tooltip.Visible = true
+					callback(tooltip)
+				else
+					window.Open = true
+					window:SetFocus()
+				end
+			end)
 		else
-			window.Open = true
-			window:SetFocus()
-		end
-	end
-
-	fakeTextSelectable.OnHoverLeave = function()
-		if tooltip and not tooltip.Visible then
 			Helpers:KillChildren(tooltip)
+			if altTooltip then
+				tooltip:AddText("\t " .. altTooltip)
+			else
+				tooltip.Visible = false
+			end
 		end
 	end
 
-	fakeTextSelectable.OnClick = function()
-		if Ext.Utils.Version() < 25 then
-			fakeTextSelectable.Selected = false
-		end
-
-		window = Ext.IMGUI.NewWindow(text)
-		window.IDContext = parent.IDContext .. text
-		window.Closeable = true
-		window.AlwaysAutoResize = true
-
-		window.OnClose = function()
-			window:Destroy()
-			window = nil
-		end
-
-		tooltipCallback(window)
+	renderable.OnHoverLeave = function()
+		Helpers:KillChildren(tooltip)
 	end
 
-	return fakeTextSelectable
+	return function()
+		if not modifier or Ext.ClientInput.GetInputManager().PressedModifiers == modifier then
+			window = Ext.IMGUI.NewWindow(item)
+			window.Closeable = true
+			window.AlwaysAutoResize = true
+
+			window.OnClose = function()
+				window:Destroy()
+				window = nil
+			end
+
+			callback(window)
+			return true
+		end
+	end
+end
+
+---@param colour number[]
+function Styler:ConvertRGBAToIMGUI(colour)
+	for i, col in ipairs(colour) do
+		if i < 4 and col > 1 then
+			colour[i] = col / 255
+		end
+	end
+	return colour
 end
