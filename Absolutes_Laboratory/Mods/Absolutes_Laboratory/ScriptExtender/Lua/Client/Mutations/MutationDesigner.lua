@@ -68,8 +68,6 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 							CharacterWindow:BuildWindow(parent, entity)
 						end)
 						hyperlink.Font = "Small"
-						hyperlink:SetStyle("SelectableTextAlign", 0.5)
-						hyperlink.Size = { 0, 0 }
 					end
 				end
 				if columnCounter == 0 then

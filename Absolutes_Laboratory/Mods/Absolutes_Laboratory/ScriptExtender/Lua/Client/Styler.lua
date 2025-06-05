@@ -210,7 +210,13 @@ function Styler:HyperlinkRenderable(renderable, item, modifier, modifierOnHover,
 	---@type ExtuiWindow?
 	local window
 
+	local killTimer
 	renderable.OnHoverEnter = function()
+		if killTimer then
+			Ext.Timer.Cancel(killTimer)
+			killTimer = nil
+			return
+		end
 		if not modifier or not modifierOnHover or Ext.ClientInput.GetInputManager().PressedModifiers == modifier then
 			Ext.Timer.WaitFor(modifierOnHover and 0 or 400, function()
 				if not window then
@@ -233,7 +239,13 @@ function Styler:HyperlinkRenderable(renderable, item, modifier, modifierOnHover,
 	end
 
 	renderable.OnHoverLeave = function()
-		Helpers:KillChildren(tooltip)
+		if killTimer then
+			Ext.Timer.Cancel(killTimer)
+		end
+		killTimer = Ext.Timer.WaitFor(100, function ()
+			Helpers:KillChildren(tooltip)
+			killTimer = nil
+		end)
 	end
 
 	return function()
