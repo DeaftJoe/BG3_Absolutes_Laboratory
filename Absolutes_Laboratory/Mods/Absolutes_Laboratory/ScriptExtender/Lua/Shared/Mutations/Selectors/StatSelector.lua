@@ -35,7 +35,7 @@ local function displayChildStats(parent, statName)
 	if childRelationships[statName] then
 		local displayTable = Styler:TwoColumnTable(parent, "children" .. statName)
 
-		for _, childStat in TableUtils:OrderedPairs(childRelationships[statName], function (key)
+		for _, childStat in TableUtils:OrderedPairs(childRelationships[statName], function(key)
 			return childRelationships[statName][key]
 		end) do
 			local row = displayTable:AddRow()
@@ -54,7 +54,7 @@ local function buildChildStatString(statName, indent)
 	indent = indent or ""
 	local result = indent .. (indent ~= "" and "-- " or "") .. statName .. "\n"
 	if childRelationships[statName] then
-		for _, childStat in TableUtils:OrderedPairs(childRelationships[statName], function (key)
+		for _, childStat in TableUtils:OrderedPairs(childRelationships[statName], function(key)
 			return childRelationships[statName][key]
 		end) do
 			result = result .. buildChildStatString(childStat, indent .. string.rep(" ", 3) .. "|")
@@ -75,7 +75,7 @@ function StatSelector:renderSelector(parent, existingSelector)
 
 	local statTable = Styler:TwoColumnTable(parent, "stats")
 	statTable.ColumnDefs[1].Width = 300 * Styler:ScaleFactor()
-	
+
 	local row = statTable:AddRow()
 
 	local statSelectCell = row:AddCell()
@@ -104,7 +104,9 @@ function StatSelector:renderSelector(parent, existingSelector)
 			delete.OnClick = function()
 				for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
 					existingSelector.criteriaValue[x].delete = true
-					existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+					if existingSelector.criteriaValue[x + 1] then
+						existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+					end
 				end
 
 				updateFunc(#existingSelector.criteriaValue)
@@ -187,9 +189,11 @@ function StatSelector:renderSelector(parent, existingSelector)
 							return value.id == statName
 						end)
 
-						for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
-							existingSelector.criteriaValue[x].delete = true
-							existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+						if i then
+							for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
+								existingSelector.criteriaValue[x].delete = true
+								existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+							end
 						end
 					end
 					displaySelectedStats()

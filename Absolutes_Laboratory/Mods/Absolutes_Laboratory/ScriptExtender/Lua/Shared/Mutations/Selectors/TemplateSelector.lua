@@ -114,7 +114,9 @@ function TemplateSelector:renderSelector(parent, existingSelector)
 			delete.OnClick = function()
 				for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
 					existingSelector.criteriaValue[x].delete = true
-					existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+					if existingSelector.criteriaValue[x + 1] then
+						existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+					end
 				end
 
 				updateFunc(#existingSelector.criteriaValue)
@@ -198,9 +200,11 @@ function TemplateSelector:renderSelector(parent, existingSelector)
 							return value.id == template
 						end)
 
-						for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
-							existingSelector.criteriaValue[x].delete = true
-							existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+						if i then
+							for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
+								existingSelector.criteriaValue[x].delete = true
+								existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+							end
 						end
 					end
 					displaySelectedTemplates()

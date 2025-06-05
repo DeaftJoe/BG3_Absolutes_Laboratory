@@ -114,7 +114,9 @@ function FactionSelector:renderSelector(parent, existingSelector)
 			delete.OnClick = function()
 				for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
 					existingSelector.criteriaValue[x].delete = true
-					existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+					if existingSelector.criteriaValue[x + 1] then
+						existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue[x + 1]._real)
+					end
 				end
 
 				updateFunc(#existingSelector.criteriaValue)
@@ -197,10 +199,11 @@ function FactionSelector:renderSelector(parent, existingSelector)
 						local i = TableUtils:IndexOf(existingSelector.criteriaValue, function(value)
 							return value.id == faction
 						end)
-
-						for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
-							existingSelector.criteriaValue[x].delete = true
-							existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+						if i then
+							for x = i, TableUtils:CountElements(existingSelector.criteriaValue) do
+								existingSelector.criteriaValue[x].delete = true
+								existingSelector.criteriaValue[x] = TableUtils:DeeplyCopyTable(existingSelector.criteriaValue._real[x + 1])
+							end
 						end
 					end
 					displaySelectedFactions()

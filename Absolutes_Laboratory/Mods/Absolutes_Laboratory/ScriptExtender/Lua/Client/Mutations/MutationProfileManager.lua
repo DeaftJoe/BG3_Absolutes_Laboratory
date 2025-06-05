@@ -434,7 +434,7 @@ function MutationProfileManager:BuildProfileManager()
 	profileCombo.WidthFitPreview = true
 
 	local sIndex = -1
-	local opt = {}
+	local opt = { "Disabled" }
 	for profileId, profile in TableUtils:OrderedPairs(profiles) do
 		table.insert(opt, profile.name)
 		if activeProfileId == profileId then
