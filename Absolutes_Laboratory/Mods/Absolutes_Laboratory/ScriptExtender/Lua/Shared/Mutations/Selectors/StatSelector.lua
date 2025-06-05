@@ -116,7 +116,7 @@ function StatSelector:renderSelector(parent, existingSelector)
 				includeChildrenCheckbox.SameLine = true
 
 				includeChildrenCheckbox:Tooltip():AddText(
-					"\t Also select all entities whose template inherit from this template. Shift-click on this checkbox to see that list of children")
+					"\t Also select all entities whose character stat inherit from this stat. Shift-click on this checkbox to see that list of children")
 
 				includeChildrenCheckbox.OnChange = function()
 					if Ext.ClientInput.GetInputManager().PressedModifiers == "Shift" then
