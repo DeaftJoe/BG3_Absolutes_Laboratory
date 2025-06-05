@@ -64,10 +64,12 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 							end
 						end)
 
-						local hyperlink = Styler:HyperlinkText(group, record.Name, function(parent)
-							CharacterWindow:BuildWindow(parent, entity)
+						Styler:MiddleAlignedColumnLayout(group, function (ele)
+							local hyperlink = Styler:HyperlinkText(ele, record.Name, function(parent)
+								CharacterWindow:BuildWindow(parent, entity)
+							end)
+							hyperlink.Font = "Small"
 						end)
-						hyperlink.Font = "Small"
 					end
 				end
 				if columnCounter == 0 then
