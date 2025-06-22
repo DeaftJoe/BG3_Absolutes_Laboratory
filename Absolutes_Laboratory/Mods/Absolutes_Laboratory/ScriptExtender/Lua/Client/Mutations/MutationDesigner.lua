@@ -7,6 +7,10 @@ Ext.Require("Shared/Mutations/Mutators/MutatorInterface.lua")
 ---@param parent ExtuiTreeParent
 ---@param existingMutation Mutation
 function MutationDesigner:RenderMutationManager(parent, existingMutation)
+	if existingMutation.modId then
+		Styler:CheapTextAlign("Mod-Added Mutation - You can browse, but not edit", parent, "Large"):SetColor("Text", { 1, 0, 0, 0.45 })
+	end
+
 	local managerTable = parent:AddTable("ManagerTable", 2)
 	managerTable.Borders = true
 
@@ -16,6 +20,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 	Styler:CheapTextAlign("Selectors", selectorColumn, "Big").UserData = "keep"
 	Styler:MiddleAlignedColumnLayout(selectorColumn, function(ele)
 		local dryRunButton = ele:AddButton("Dry Run Selectors")
+		dryRunButton.Disabled = false
 		dryRunButton.UserData = "keep"
 
 		---@type ExtuiWindow
@@ -64,7 +69,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 							end
 						end)
 
-						Styler:MiddleAlignedColumnLayout(group, function (ele)
+						Styler:MiddleAlignedColumnLayout(group, function(ele)
 							local hyperlink = Styler:HyperlinkText(ele, record.Name, function(parent)
 								CharacterWindow:BuildWindow(parent, entity)
 							end)
@@ -93,6 +98,26 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 	Styler:CheapTextAlign("Mutators", mutatorColumn, "Big").UserData = "keep"
 	mutatorColumn:AddDummy(16, 40)
 	self:RenderMutators(mutatorColumn, existingMutation.mutators)
+
+	if existingMutation.modId then
+		---@param parent ExtuiTreeParent
+		local function disableNonNavigatableElements(parent)
+			local success = pcall(function(...)
+				for _, child in pairs(parent.Children) do
+					disableNonNavigatableElements(child)
+				end
+			end)
+
+			if success or parent.UserData == "EnableForMods" then
+				parent.Disabled = false
+			else
+				parent.Disabled = true
+			end
+		end
+
+		disableNonNavigatableElements(selectorColumn)
+		disableNonNavigatableElements(mutatorColumn)
+	end
 end
 
 ---@param parent ExtuiTreeParent

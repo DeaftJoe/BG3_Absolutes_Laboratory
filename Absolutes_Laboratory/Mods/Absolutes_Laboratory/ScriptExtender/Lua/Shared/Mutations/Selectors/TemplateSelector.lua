@@ -4,7 +4,7 @@ TemplateSelector = SelectorInterface:new("Templates")
 ---@field id GUIDSTRING
 ---@field includeChildren boolean
 
----@class TemplateSelector : SelectorInterface
+---@class TemplateSelector : Selector
 ---@field criteriaValue TemplateCriteria[]
 
 local templates = {}
@@ -80,12 +80,14 @@ function TemplateSelector:renderSelector(parent, existingSelector)
 
 	existingSelector.criteriaValue = existingSelector.criteriaValue or {}
 
-	local updateFunc
-	parent, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Templates"))
-	parent:SetColor("Header", { 1, 1, 1, 0 })
+	local templateTree, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Templates"))
+	templateTree:SetColor("Header", { 1, 1, 1, 0 })
+	templateTree.Disabled = false
 
-	local templateTable = Styler:TwoColumnTable(parent, "templates")
+	local templateTable = Styler:TwoColumnTable(templateTree, "templates")
+	templateTable.Disabled = parent.Disabled
 	templateTable.ColumnDefs[1].Width = 300 * Styler:ScaleFactor()
+	
 	local row = templateTable:AddRow()
 
 	local templateSelectCell = row:AddCell()
@@ -219,6 +221,47 @@ function TemplateSelector:renderSelector(parent, existingSelector)
 		buildSelects(string.upper(templateSelectInput.Text))
 	end
 	updateFunc(#existingSelector.criteriaValue)
+end
+
+---@param selector TemplateSelector
+function TemplateSelector:handleDependencies(_, selector, removeMissingDependencies)
+	for i, templateCriteria in ipairs(selector.criteriaValue) do
+		---@type CharacterTemplate
+		local characterTemplate = Ext.ClientTemplate.GetTemplate(templateCriteria.id)
+
+		if not characterTemplate then
+			selector.criteriaValue[i] = nil
+		elseif not removeMissingDependencies then
+			local fileName = characterTemplate.FileName:gsub("^.*[\\/]Mods[\\/]", ""):gsub("^.*[\\/]Public[\\/]", ""):match("([^/\\]+)")
+			fileName = fileName ~= "" and fileName or characterTemplate.FileName
+
+			if not TableUtils:IndexOf({ "Shared", "SharedDev", "Gustav" }, fileName) then
+				---@type ModuleInfo
+				local modInfo
+				for _, modId in pairs(Ext.Mod.GetLoadOrder()) do
+					local mod = Ext.Mod.GetMod(modId)
+					if fileName:find(mod.Info.Directory) then
+						modInfo = mod.Info
+						break
+					end
+				end
+
+				selector.modDependencies = selector.modDependencies or {}
+				if not selector.modDependencies[modInfo.ModuleUUID] then
+					selector.modDependencies[modInfo.ModuleUUID] = {
+						modName = modInfo.Name,
+						modAuthor = modInfo.Author,
+						modVersion = modInfo.ModVersion,
+						modId = modInfo.ModuleUUID,
+						packagedItems = {}
+					}
+
+					selector.modDependencies[modInfo.ModuleUUID].packagedItems[templateCriteria.id] = characterTemplate.DisplayName:Get() or characterTemplate.Name
+				end
+			end
+		end
+	end
+	TableUtils:ReindexNumericTable(selector.criteriaValue)
 end
 
 ---@param charTemplate CharacterTemplate

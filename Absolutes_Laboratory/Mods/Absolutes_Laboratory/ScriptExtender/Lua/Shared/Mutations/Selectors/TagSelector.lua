@@ -34,11 +34,12 @@ function TagSelector:renderSelector(parent, existingSelector)
 
 	init()
 
-	local updateFunc
-	parent, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Tags"))
-	parent:SetColor("Header", { 1, 1, 1, 0 })
+	local tagTree, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Tags"))
+	tagTree.Disabled = false
+	tagTree:SetColor("Header", { 1, 1, 1, 0 })
 
-	local tagTable = Styler:TwoColumnTable(parent, "tags")
+	local tagTable = Styler:TwoColumnTable(tagTree, "tags")
+	tagTable.Disabled = parent.Disabled
 	tagTable.ColumnDefs[1].Width = 300 * Styler:ScaleFactor()
 	local row = tagTable:AddRow()
 
@@ -58,8 +59,8 @@ function TagSelector:renderSelector(parent, existingSelector)
 		Helpers:KillChildren(tagDisplay)
 
 		for _, tag in ipairs(existingSelector.criteriaValue) do
-			local delete = Styler:ImageButton(tagDisplay:AddImageButton("delete" .. tag, "ico_red_x", {16, 16}))
-			delete.OnClick = function ()
+			local delete = Styler:ImageButton(tagDisplay:AddImageButton("delete" .. tag, "ico_red_x", { 16, 16 }))
+			delete.OnClick = function()
 				table.remove(existingSelector.criteriaValue, TableUtils:IndexOf(existingSelector.criteriaValue, tag))
 				updateFunc(#existingSelector.criteriaValue)
 				displaySelectedTags()
@@ -115,11 +116,50 @@ function TagSelector:renderSelector(parent, existingSelector)
 end
 
 ---@param selector TagSelector
+function TagSelector:handleDependencies(_, selector, removeMissingDependencies)
+	local tagSources = Ext.StaticData.GetSources("Tag")
+
+	for i, tagId in ipairs(selector.criteriaValue) do
+		---@type ResourceTag
+		local tagData = Ext.StaticData.Get(tagId, "Tag")
+		if not tagData then
+			selector.criteriaValue[i] = nil
+		elseif not removeMissingDependencies then
+			local tagSource = TableUtils:IndexOf(tagSources, function(value)
+				return TableUtils:IndexOf(value, tagId) ~= nil
+			end)
+
+			if tagSource then
+				selector.modDependencies = selector.modDependencies or {}
+				if not selector.modDependencies[tagSource] then
+					local name, author, version = Helpers:BuildModFields(tagSource)
+					if author == "Larian" then
+						goto continue
+					end
+
+					selector.modDependencies[tagSource] = {
+						modName = name,
+						modAuthor = author,
+						modVersion = version,
+						modId = tagSource,
+						packagedItems = {}
+					}
+				end
+
+				selector.modDependencies[tagSource].packagedItems[tagId] = tagData.DisplayName:Get() or tagData.Name
+			end
+			::continue::
+		end
+	end
+	TableUtils:ReindexNumericTable(selector.criteriaValue)
+end
+
+---@param selector TagSelector
 ---@return fun(entity: EntityHandle|EntityRecord): boolean
 function TagSelector:predicate(selector)
 	local tags = selector.criteriaValue
 
-	return function (entity)
+	return function(entity)
 		if type(entity) == "userdata" then
 			---@cast entity EntityHandle
 			for _, tag in pairs(tags) do
@@ -136,5 +176,5 @@ function TagSelector:predicate(selector)
 			end
 		end
 		return false
- 	end
+	end
 end

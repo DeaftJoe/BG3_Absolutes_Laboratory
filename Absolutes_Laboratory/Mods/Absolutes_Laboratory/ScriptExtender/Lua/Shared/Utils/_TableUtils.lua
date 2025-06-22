@@ -107,7 +107,7 @@ end
 ---@generic K
 ---@generic V
 ---@param t table<K,V>
----@param keyTransformFunc (fun(key: string, value: V):any)?
+---@param keyTransformFunc (fun(key: K, value: V):any)?
 ---@return fun(table: table<K, V>, index?: K):K,V
 function TableUtils:OrderedPairs(t, keyTransformFunc)
 	local keys = {}
@@ -157,15 +157,13 @@ function TableUtils:IndexOf(list, str)
 end
 
 --- Reindexes a table with numeric keys so they increment sequentially from 1, modifying the input table in-place
----@param tbl table
----@return table
+---@generic T:table
+---@param tbl T
+---@return T
 function TableUtils:ReindexNumericTable(tbl)
 	local values = {}
-	for _, value in pairs(tbl) do
+	for k, value in pairs(tbl) do
 		table.insert(values, value)
-	end
-	-- Clear the original table
-	for k in pairs(tbl) do
 		tbl[k] = nil
 	end
 	-- Reinsert values with sequential numeric keys
@@ -226,10 +224,14 @@ end
 ---@param tbl table
 function TableUtils:ConvertStringifiedNumberIndexes(tbl)
 	for key, value in TableUtils:OrderedPairs(tbl) do
-		local numericKey = tonumber(key)
+		local numericKey = type(key) ~= "number" and tonumber(key) or nil
 		if numericKey then
 			tbl[key] = nil
 			tbl[numericKey] = value
+		end
+
+		if type(value) == "table" then
+			self:ConvertStringifiedNumberIndexes(value)
 		end
 	end
 end

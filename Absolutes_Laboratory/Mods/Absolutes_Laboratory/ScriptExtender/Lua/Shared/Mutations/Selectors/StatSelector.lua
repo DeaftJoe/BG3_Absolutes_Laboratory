@@ -4,7 +4,7 @@ StatSelector = SelectorInterface:new("Stats")
 ---@field id GUIDSTRING
 ---@field includeChildren boolean
 
----@class StatSelector : SelectorInterface
+---@class StatSelector : Selector
 ---@field criteriaValue StatCriteria[]
 
 local stats = {}
@@ -69,11 +69,12 @@ function StatSelector:renderSelector(parent, existingSelector)
 
 	existingSelector.criteriaValue = existingSelector.criteriaValue or {}
 
-	local updateFunc
-	parent, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Stats"))
-	parent:SetColor("Header", { 1, 1, 1, 0 })
+	local statTree, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Stats"))
+	statTree.Disabled = false
+	statTree:SetColor("Header", { 1, 1, 1, 0 })
 
-	local statTable = Styler:TwoColumnTable(parent, "stats")
+	local statTable = Styler:TwoColumnTable(statTree, "stats")
+	statTable.Disabled = parent.Disabled
 	statTable.ColumnDefs[1].Width = 300 * Styler:ScaleFactor()
 
 	local row = statTable:AddRow()
@@ -208,6 +209,38 @@ function StatSelector:renderSelector(parent, existingSelector)
 		buildSelects(string.upper(statSelectInput.Text))
 	end
 	updateFunc(#existingSelector.criteriaValue)
+end
+
+---@param selector StatSelector
+function StatSelector:handleDependencies(_, selector, removeMissingDependencies)
+	for i, characterStatCriteria in ipairs(selector.criteriaValue) do
+		---@type Character
+		local characterStat = Ext.Stats.Get(characterStatCriteria.id)
+		if not characterStat then
+			selector.criteriaValue[i] = nil
+		elseif not removeMissingDependencies then
+			if characterStat.OriginalModId ~= "" then
+				selector.modDependencies = selector.modDependencies or {}
+				if not selector.modDependencies[characterStat.OriginalModId] then
+					local name, author, version = Helpers:BuildModFields(characterStat.OriginalModId)
+					if author == "Larian" then
+						goto continue
+					end
+					selector.modDependencies[characterStat.OriginalModId] = {
+						modName = name,
+						modAuthor = author,
+						modVersion = version,
+						modId = characterStat.OriginalModId,
+						packagedItems = {}
+					}
+				end
+
+				selector.modDependencies[characterStat.OriginalModId].packagedItems[characterStatCriteria.id] = characterStat.Name
+			end
+		end
+		::continue::
+	end
+	TableUtils:ReindexNumericTable(selector.criteriaValue)
 end
 
 ---@param charStat Character

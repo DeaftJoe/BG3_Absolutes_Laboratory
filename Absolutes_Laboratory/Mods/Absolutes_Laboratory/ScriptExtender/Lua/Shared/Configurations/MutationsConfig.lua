@@ -14,14 +14,33 @@ ConfigurationStructure.config.mutations.settings = {
 	}
 }
 
+---@alias ModDependencies {Guid : ModDependency}?
+
+---@class ModDependency
+ConfigurationStructure.DynamicClassDefinitions.modDependency = {
+	---@type Guid
+	modId = "",
+	---@type integer[]
+	modVersion = {},
+	---@type string
+	modAuthor = "",
+	---@type string
+	modName = "",
+	---@type {string: string}
+	packagedItems = {}
+}
+
 --#region Selectors
 ---@class Selector
 ConfigurationStructure.DynamicClassDefinitions.selector = {
 	inclusive = true,
+	---@type string
 	criteriaCategory = nil,
 	criteriaValue = nil,
 	---@type SelectorQuery
-	subSelectors = {}
+	subSelectors = {},
+	---@type ModDependencies
+	modDependencies = nil
 }
 
 ---@alias SelectorGrouper "AND"|"OR"
@@ -43,7 +62,9 @@ ConfigurationStructure.DynamicClassDefinitions.mutator = {
 	targetProperty = "",
 	values = nil,
 	---@type {[string]: MutationModifier}?
-	modifiers = nil
+	modifiers = nil,
+	---@type ModDependencies
+	modDependencies = nil,
 }
 
 --#endregion
@@ -55,7 +76,9 @@ ConfigurationStructure.DynamicClassDefinitions.mutations = {
 	---@type SelectorQuery
 	selectors = {},
 	---@type Mutator[]
-	mutators = {}
+	mutators = {},
+	---@type string?
+	modId = nil,
 }
 
 ---@class MutationFolder
@@ -63,7 +86,9 @@ ConfigurationStructure.DynamicClassDefinitions.folders = {
 	name = "",
 	description = "",
 	---@type {[Guid]: Mutation}
-	mutations = {}
+	mutations = {},
+	---@type Guid?
+	modId = nil
 }
 
 ---@type {[Guid] : MutationFolder}
@@ -78,6 +103,8 @@ ConfigurationStructure.DynamicClassDefinitions.profile = {
 	defaultActive = false,
 	---@type MutationProfileRule[]
 	mutationRules = {},
+	---@type Guid?
+	modId = nil
 }
 
 ---@class MutationProfileRule
@@ -86,10 +113,6 @@ ConfigurationStructure.DynamicClassDefinitions.profileMutationRule = {
 	mutationFolderId = "",
 	---@type Guid
 	mutationId = "",
-	---@type string?
-	modId = nil,
-	---@type string?
-	modName = nil,
 	---@type boolean
 	additive = false
 }
@@ -107,19 +130,19 @@ ConfigurationStructure.config.mutations.spellLists = {}
 ---@class SpellSubLists
 ConfigurationStructure.DynamicClassDefinitions.spellSubLists = {
 	---@type SpellName[]?
-	guaranteed = {},
+	guaranteed = nil,
 	---@type SpellName[]?
-	randomized = {},
+	randomized = nil,
 	---@type SpellName[]?
-	startOfCombatOnly = {},
+	startOfCombatOnly = nil,
 	---@type SpellName[]?
-	onLoadOnly = {},
+	onLoadOnly = nil,
 	---@type SpellName[]?
-	blackListed = {}
+	blackListed = nil
 }
 
----@class LeveledSubList 
----@field linkedProgressions {[Guid]: SpellSubLists}? 
+---@class LeveledSubList
+---@field linkedProgressions {[Guid]: SpellSubLists}?
 ---@field selectedSpells SpellSubLists
 
 ---@class SpellList
@@ -128,8 +151,10 @@ ConfigurationStructure.DynamicClassDefinitions.leveledSpellList = {
 	description = "",
 	---@type Guid?
 	modId = nil,
-	---@type LeveledSubList[]
-	levels = nil
+	---@type LeveledSubList[]?
+	levels = nil,
+	---@type ModDependencies
+	modDependencies = nil
 }
 
 ConfigurationStructure.config.mutations.settings.spellLists = {

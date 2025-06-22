@@ -4,7 +4,7 @@ FactionSelector = SelectorInterface:new("Factions")
 ---@field id GUIDSTRING
 ---@field includeChildren boolean
 
----@class FactionSelector : SelectorInterface
+---@class FactionSelector : Selector
 ---@field criteriaValue FactionCriteria[]
 
 local factions = {}
@@ -79,11 +79,12 @@ function FactionSelector:renderSelector(parent, existingSelector)
 
 	existingSelector.criteriaValue = existingSelector.criteriaValue or {}
 
-	local updateFunc
-	parent, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Factions"))
-	parent:SetColor("Header", { 1, 1, 1, 0 })
+	local factionTree, updateFunc = Styler:DynamicLabelTree(parent:AddTree("Factions"))
+	factionTree.Disabled = false
+	factionTree:SetColor("Header", { 1, 1, 1, 0 })
 
-	local factionTable = Styler:TwoColumnTable(parent, "factions")
+	local factionTable = Styler:TwoColumnTable(factionTree, "factions")
+	factionTable.Disabled = parent.Disabled
 	factionTable.ColumnDefs[1].Width = 300 * Styler:ScaleFactor()
 
 	local row = factionTable:AddRow()
@@ -218,6 +219,46 @@ function FactionSelector:renderSelector(parent, existingSelector)
 		buildSelects(string.upper(factionSelectInput.Text))
 	end
 	updateFunc(#existingSelector.criteriaValue)
+end
+
+---@param selector FactionSelector
+function FactionSelector:handleDependencies(_, selector, removeMissingDependencies)
+	local factionSources = Ext.StaticData.GetSources("Faction")
+
+	for i, faction in ipairs(selector.criteriaValue) do
+		---@type ResourceFaction
+		local factionData = Ext.StaticData.Get(faction.id, "Faction")
+
+		if not factionData then
+			selector.criteriaValue[i] = nil
+		elseif not removeMissingDependencies then
+			local factionSource = TableUtils:IndexOf(factionSources, function(value)
+				return TableUtils:IndexOf(value, faction.id) ~= nil
+			end)
+
+			if factionSource then
+				selector.modDependencies = selector.modDependencies or {}
+				if not selector.modDependencies[factionSource] then
+					local name, author, version = Helpers:BuildModFields(factionSource)
+					if author == "Larian" then
+						goto continue
+					end
+					selector.modDependencies[factionSource] = {
+						modName = name,
+						modAuthor = author,
+						modVersion = version,
+						modId = factionSource,
+						packagedItems = {}
+					}
+				end
+
+				selector.modDependencies[factionSource].packagedItems[faction.id] = factionData.Faction
+			end
+		end
+		::continue::
+	end
+
+	TableUtils:ReindexNumericTable(selector.criteriaValue)
 end
 
 ---@param charFaction ResourceFaction
