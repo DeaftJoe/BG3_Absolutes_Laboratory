@@ -3,6 +3,10 @@ Ext.Require("Shared/Mutations/Mutators/SpellList/SpellListDesigner.lua")
 ---@class SpellListMutatorClass : MutatorInterface
 SpellListMutator = MutatorInterface:new("SpellList")
 
+function SpellListMutator:priority()
+	return 10
+end
+
 ---@class SpellListAbilityScoreCondition
 ---@field comparator "gte"|"lte"
 ---@field value number
@@ -50,7 +54,6 @@ function SpellListMutator:renderMutator(parent, mutator)
 		local groupCell = parentRow:AddCell()
 
 		local header = groupCell:AddCollapsingHeader("Group " .. sMG)
-		header.DefaultOpen = true
 
 		local delete = Styler:ImageButton(header:AddImageButton("delete" .. mutator.targetProperty, "ico_red_x", { 16, 16 }))
 		delete:Tooltip():AddText("\t Delete Group")
@@ -106,12 +109,16 @@ function SpellListMutator:renderMutator(parent, mutator)
 					spellListSep:SetStyle("SeparatorTextAlign", 0.1)
 					spellListSep:Tooltip():AddText("\t Specifying multiple spell lists means one will be randomly chosen to be assigned to an entity - it will not add all of them")
 
-					for sL, spellList in TableUtils:OrderedPairs(leveledSpellPool.spellLists, function(_, value)
+					for sL, spellListId in TableUtils:OrderedPairs(leveledSpellPool.spellLists, function(_, value)
 						return configuredSpellLists[value] and configuredSpellLists[value].name
 					end) do
-						spellList = configuredSpellLists[spellList]
+						local spellList = configuredSpellLists[spellListId]
 						if spellList then
-							local text = cell:AddText(spellList.name)
+							local text = cell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (%s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
+							text.OnClick = function()
+								SpellListDesigner:buildSpellDesignerWindow(spellListId)
+							end
+
 							if spellList.description ~= "" then
 								text:Tooltip():AddText(spellList.description)
 							end
@@ -131,6 +138,7 @@ function SpellListMutator:renderMutator(parent, mutator)
 						end) do
 							---@type ExtuiSelectable
 							local select = popup:AddSelectable(spellList.name, "DontClosePopups")
+							select.IDContext = id
 							select.Selected = TableUtils:IndexOf(leveledSpellPool.spellLists, id) ~= nil
 							select.OnClick = function()
 								local index = TableUtils:IndexOf(leveledSpellPool.spellLists, id)
@@ -1157,13 +1165,13 @@ if Ext.IsServer() then
 		end
 	end
 
-	function SpellListMutator:applyMutator(entity, mutator)
+	function SpellListMutator:applyMutator(entity, entityVar)
 		---@type EsvSpellSpellSystem
 		local spellSystem = Ext.System.ServerSpell
 
 		SpellListDesigner:buildProgressionIndex()
 
-		local spellListMutators = mutator.appliedMutators[self.name]
+		local spellListMutators = entityVar.appliedMutators[self.name]
 		if not spellListMutators[1] then
 			spellListMutators = { spellListMutators }
 		end
@@ -1238,14 +1246,14 @@ if Ext.IsServer() then
 		end
 
 		if spellMutatorGroup then
-			mutator.originalValues[self.name] = mutator.originalValues[self.name] or {
+			entityVar.originalValues[self.name] = entityVar.originalValues[self.name] or {
 				addedSpells = {},
 				castedSpells = {},
 				removedSpells = {}
 			} --[[@as SpellListOriginalValues]]
 
 			---@type SpellListOriginalValues
-			local origValues = mutator.originalValues[self.name]
+			local origValues = entityVar.originalValues[self.name]
 
 			if spellMutatorGroup.removeSpells then
 				spellSystem.RemoveSpell = spellSystem.RemoveSpell or {}
@@ -1421,10 +1429,12 @@ if Ext.IsServer() then
 					end
 				end
 			end
+
+			entityVar.appliedMutators[self.name].appliedLists = appliedLists
 		else
-			mutator.appliedMutators[self.name] = nil
-			mutator.originalValues[self.name] = nil
-			mutator.appliedMutatorsPath[self.name] = nil
+			entityVar.appliedMutators[self.name] = nil
+			entityVar.originalValues[self.name] = nil
+			entityVar.appliedMutatorsPath[self.name] = nil
 		end
 	end
 end

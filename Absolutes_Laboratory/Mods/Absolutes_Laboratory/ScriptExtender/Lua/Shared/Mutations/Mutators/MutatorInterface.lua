@@ -43,6 +43,10 @@ function MutatorInterface:canBeAdditive()
 	return false
 end
 
+function MutatorInterface:priority()
+	return 9999
+end
+
 ---@param export MutationsConfig
 ---@param mutator Mutator
 ---@param removeMissingDependencies boolean?
@@ -58,9 +62,11 @@ function MutatorInterface:applyMutator(entity, entityVar)
 		entity.DisplayName and entity.DisplayName.Name:Get() or entity.ServerCharacter.Template.Name,
 		entity.Uuid.EntityUuid)
 
-	for mutatorName in pairs(entityVar.appliedMutators) do
+	for mutatorName in TableUtils:OrderedPairs(entityVar.appliedMutators, function(key)
+		return self.registeredMutators[key]:priority()
+	end) do
 		local mTime = Ext.Timer:MonotonicTime()
-		Logger:BasicDebug("==== Starting mutator %s ====", mutatorName)
+		Logger:BasicDebug("==== Starting mutator %s (priority %s) ====", mutatorName, self.registeredMutators[mutatorName]:priority())
 		local success, error = xpcall(function(...)
 			self.registeredMutators[mutatorName]:applyMutator(entity, entityVar)
 		end, debug.traceback)
@@ -88,7 +94,9 @@ function MutatorInterface:undoMutator(entity, entityVar)
 			entity.DisplayName and entity.DisplayName.Name:Get() or entity.ServerCharacter.Template.Name,
 			entity.Uuid.EntityUuid)
 
-		for mutatorName in pairs(entityVar.appliedMutators) do
+		for mutatorName in TableUtils:OrderedPairs(entityVar.appliedMutators, function(key)
+			return self.registeredMutators[key]:priority()
+		end) do
 			local mTime = Ext.Timer:MonotonicTime()
 			Logger:BasicDebug("==== Starting mutator %s ====", mutatorName)
 
@@ -111,4 +119,5 @@ function MutatorInterface:undoMutator(entity, entityVar)
 end
 
 Ext.Require("Shared/Mutations/Mutators/HealthMutator.lua")
+Ext.Require("Shared/Mutations/Mutators/ClassesAndSubclassesMutator.lua")
 Ext.Require("Shared/Mutations/Mutators/SpellList/SpellListMutator.lua")
