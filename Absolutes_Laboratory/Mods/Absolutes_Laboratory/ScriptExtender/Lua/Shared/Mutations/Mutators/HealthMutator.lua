@@ -1,5 +1,13 @@
 HealthMutator = MutatorInterface:new("Health")
 
+function HealthMutator:priority()
+	return self:recordPriority(LevelMutator:priority() + 1)
+end
+
+function HealthMutator:Transient()
+	return true
+end
+
 ---@alias HealthModifierKeys "CharacterLevel"|"GameLevel"|"XPReward"
 
 ---@class HealthMutator : Mutator
@@ -151,7 +159,7 @@ Setting to 0 will just use base, empty will use the last non-empty value in the 
 	end
 	--#endregion
 
-	--#region Character Level
+	--#region XPReward
 	---@type HealthClassLevelModifier
 	local xpRewardLevelModifier = modifiers["XPReward"] or {
 		value = 0,
@@ -375,11 +383,19 @@ function HealthMutator:applyMutator(entity, entityVar)
 	local percentageToAdd = (mutator.values + (characterMod + gameLevelMod + xPRewardMod)) / 100
 
 	entityVar.originalValues[self.name] = entity.Health.MaxHp
+	local currentHealth = entity.Health.Hp
 
 	local currentHealthPercentage = 1 - (entity.Health.Hp / entity.Health.MaxHp)
 
 	entity.Health.MaxHp = math.floor(entity.Health.MaxHp + (entity.Health.MaxHp * percentageToAdd))
 	entity.Health.Hp = entity.Health.MaxHp - (entity.Health.MaxHp * currentHealthPercentage)
+
+	Logger:BasicDebug("Changed max from %s -> %s, current from %s -> %s",
+		entityVar.originalValues[self.name],
+		entity.Health.MaxHp,
+		currentHealth,
+		entity.Health.Hp
+	)
 
 	entity:Replicate("Health")
 end
@@ -394,7 +410,7 @@ function HealthMutator:undoMutator(entity, entityVar)
 
 	entity:Replicate("Health")
 
-	Logger:BasicTrace("Undid Health Mutator, reverting max health of %s to %s (current health: %s)",
+	Logger:BasicDebug("Reverting max health of %s to %s (current health: %s)",
 		entity.ServerCharacter.Template.Name .. "_" .. entity.Uuid.EntityUuid,
 		originalMaxHp,
 		entity.Health.MaxHp,

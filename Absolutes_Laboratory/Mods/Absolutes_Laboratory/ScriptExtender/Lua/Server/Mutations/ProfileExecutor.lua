@@ -10,7 +10,7 @@ Ext.Vars.RegisterModVariable(ModuleUUID, "ActiveMutationProfile", {
 
 MutationProfileExecutor = {}
 
-function MutationProfileExecutor:ExecuteProfile()
+function MutationProfileExecutor:ExecuteProfile(rerunTransient)
 	if next(FileUtils:LoadTableFile(EntityRecorder.trackerFilename)) then
 		Logger:BasicInfo("Recorder is currently running - skipping Mutations")
 		return
@@ -24,11 +24,8 @@ function MutationProfileExecutor:ExecuteProfile()
 		local counter = 0
 		---@type {[Guid] : {[Guid]: SelectorPredicate}}
 		local cachedSelectors = {}
-		for _, entity in pairs(Ext.Entity.GetAllEntitiesWithComponent("ServerCharacter")) do
-			if entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME] then
-				MutatorInterface:undoMutator(entity, entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME])
-			end
 
+		for _, entity in pairs(Ext.Entity.GetAllEntitiesWithComponent("ServerCharacter")) do
 			if (Osi.IsDead(entity.Uuid.EntityUuid) == 0 or not entity.DeadByDefault) and not entity.PartyMember then
 				---@type MutatorEntityVar
 				local entityVar = {
@@ -68,13 +65,20 @@ function MutationProfileExecutor:ExecuteProfile()
 					end
 				end
 
+				if entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME] then
+					MutatorInterface:undoMutator(entity, entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME], entityVar, rerunTransient)
+				end
+
 				if next(entityVar.appliedMutators) then
 					counter = counter + 1
-					entityVar = TableUtils:DeeplyCopyTable(entityVar)
 					MutatorInterface:applyMutator(entity, entityVar)
 				end
 
 				entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME] = next(entityVar.appliedMutators) and entityVar or nil
+			else
+				if entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME] then
+					MutatorInterface:undoMutator(entity, entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME], rerunTransient)
+				end
 			end
 		end
 		Logger:BasicInfo("======= Mutated %s Entities in %dms under Profile %s =======",
@@ -97,6 +101,12 @@ function MutationProfileExecutor:ExecuteProfile()
 		Logger:BasicInfo("======= Cleared Mutations From %s Entities in %dms =======", counter, Ext.Timer:MonotonicTime() - time)
 	end
 end
+
+Ext.RegisterConsoleCommand("TraceEntities", function(cmd, ...)
+	ECSLogger:ClearLogFile()
+	Printer:Start(100, ...)
+	MutationProfileExecutor:ExecuteProfile()
+end)
 
 Ext.Osiris.RegisterListener("LevelGameplayReady", 2, "after", function(levelName, isEditorMode)
 	if levelName == "SYS_CC_I" then return end

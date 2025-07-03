@@ -1,10 +1,14 @@
 ClassesAndSubclassesMutator = MutatorInterface:new("Classes And Subclasses")
 
 function ClassesAndSubclassesMutator:priority()
-	return SpellListMutator:priority() + 1
+	return self:recordPriority(SpellListMutator:priority() + 1)
 end
 
 function ClassesAndSubclassesMutator:canBeAdditive()
+	return true
+end
+
+function ClassesAndSubclassesMutator:Transient()
 	return true
 end
 
@@ -321,9 +325,7 @@ function ClassesAndSubclassesMutator:undoMutator(entity, entityVar)
 	end
 	entity:Replicate("Classes")
 
-	if Logger:IsLogLevelEnabled(Logger.PrintTypes.TRACE) then
-		Logger:BasicTrace("Reverted to %s", Ext.Json.Stringify(entityVar.originalValues[self.name]))
-	end
+	Logger:BasicTrace("Reverted to %s", entityVar.originalValues[self.name])
 end
 
 function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
@@ -358,7 +360,7 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 					end
 				else
 					Logger:BasicWarning("Skipping a Classes and Subclasses mutator spellList check because no spellLists were added to it despite specifying a number: %s",
-						Ext.Json.Stringify(classConditonal))
+						classConditonal)
 				end
 			end
 			table.insert(chosenClassGroups, classConditonal)

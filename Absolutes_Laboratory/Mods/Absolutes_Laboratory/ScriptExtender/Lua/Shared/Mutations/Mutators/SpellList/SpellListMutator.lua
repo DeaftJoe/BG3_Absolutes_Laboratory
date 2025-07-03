@@ -4,7 +4,7 @@ Ext.Require("Shared/Mutations/Mutators/SpellList/SpellListDesigner.lua")
 SpellListMutator = MutatorInterface:new("SpellList")
 
 function SpellListMutator:priority()
-	return 10
+	return self:recordPriority(LevelMutator:priority() + 1)
 end
 
 ---@class SpellListAbilityScoreCondition
@@ -1037,7 +1037,6 @@ if Ext.IsServer() then
 		local origValues = mutator.originalValues[self.name]
 		if origValues then
 			if origValues.addedSpells then
-				spellSystem.RemoveSpell = spellSystem.RemoveSpell or {}
 				spellSystem.RemoveSpell[entity] = spellSystem.RemoveSpell[entity] or {}
 				local removeSpells = spellSystem.RemoveSpell[entity]
 				for _, spell in pairs(entity.SpellBook.Spells) do
@@ -1049,7 +1048,6 @@ if Ext.IsServer() then
 			end
 
 			if origValues.removedSpells then
-				spellSystem.AddSpells = spellSystem.AddSpells or {}
 				spellSystem.AddSpells[entity] = spellSystem.AddSpells[entity] or {}
 
 				local addSpells = spellSystem.AddSpells[entity]
