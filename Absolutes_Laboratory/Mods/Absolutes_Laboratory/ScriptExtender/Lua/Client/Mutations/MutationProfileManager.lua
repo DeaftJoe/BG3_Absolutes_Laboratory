@@ -8,6 +8,16 @@ Ext.Vars.RegisterModVariable(ModuleUUID, "ActiveMutationProfile", {
 	SyncOnWrite = true
 })
 
+Ext.Vars.RegisterModVariable(ModuleUUID, "HasDisabledProfiles", {
+	Server = true,
+	Client = true,
+	WriteableOnServer = true,
+	WriteableOnClient = true,
+	SyncToClient = true,
+	SyncToServer = true,
+	SyncOnWrite = true
+})
+
 MutationProfileManager = {
 	---@type ExtuiGroup
 	selectionParent = nil,
@@ -542,7 +552,7 @@ function MutationProfileManager:BuildModFolders()
 							end) do
 								copyMenu:AddSelectable(userFolder.name).OnClick = function()
 									if TableUtils:IndexOf(userFolder.mutations, function(value)
-											return value.name == mut.name		
+											return value.name == mut.name
 										end) then
 										mut.name = mut.name .. " (COPY)"
 									end
@@ -665,21 +675,30 @@ function MutationProfileManager:BuildProfileManager()
 	profileCombo.SelectedIndex = sIndex - 1
 	profileCombo.OnChange = function()
 		local selectedName = profileCombo.Options[profileCombo.SelectedIndex + 1]
-		local isModProfile = selectedName:sub(#selectedName - 2) == "(M)"
 
-		activeProfileId = TableUtils:IndexOf(combinedProfiles, function(value)
-			if isModProfile then
-				if value.modId then
-					return value.name == selectedName:sub(1, #selectedName - 3)
-				else
-					return false
+		if selectedName == "Disabled" then
+			activeProfileId = nil
+			Ext.Vars.GetModVariables(ModuleUUID).HasDisabledProfiles = true
+			Ext.Vars.GetModVariables(ModuleUUID).ActiveMutationProfile = nil
+		else
+			local isModProfile = selectedName:sub(#selectedName - 2) == "(M)"
+
+			activeProfileId = TableUtils:IndexOf(combinedProfiles, function(value)
+				if isModProfile then
+					if value.modId then
+						return value.name == selectedName:sub(1, #selectedName - 3)
+					else
+						return false
+					end
+				elseif not value.modId then
+					return value.name == selectedName
 				end
-			elseif not value.modId then
-				return value.name == selectedName
-			end
-			return false
-		end)
-		Ext.Vars.GetModVariables(ModuleUUID).ActiveMutationProfile = activeProfileId
+				return false
+			end)
+
+			Ext.Vars.GetModVariables(ModuleUUID).HasDisabledProfiles = false
+			Ext.Vars.GetModVariables(ModuleUUID).ActiveMutationProfile = activeProfileId
+		end
 
 		Helpers:KillChildren(self.rulesOrderGroup, self.mutationDesigner)
 		self:BuildFolderManager()
@@ -727,12 +746,6 @@ function MutationProfileManager:BuildProfileManager()
 				{
 					label = "Description",
 					type = "Multiline"
-				},
-				{
-					label = "Active By Default for New Games?",
-					propertyField = "defaultActive",
-					type = "Checkbox",
-					defaultValue = false
 				}
 			}
 		)
@@ -836,11 +849,25 @@ function MutationProfileManager:BuildProfileManager()
 			exportProfilesMenu:AddCheckbox(profile.name).UserData = profileId
 		end
 
+		local isDefault = ConfigurationStructure.config.mutations.settings.defaultProfile == profileId
+
 		---@type ExtuiMenu
-		local profileMenu = manageProfilePopup:AddMenu(profile.name .. (profile.modId and " (M)" or ""))
+		local profileMenu = manageProfilePopup:AddMenu((isDefault and "(D) " or "") .. profile.name .. (profile.modId and " (M)" or ""))
 
 		if profile.modId then
 			profileMenu:AddSeparatorText("From " .. Ext.Mod.GetMod(profile.modId).Info.Name):SetStyle("Alpha", 0.5)
+		end
+
+		if not isDefault then
+			profileMenu:AddItem("Set as Default Profile").OnClick = function()
+				ConfigurationStructure.config.mutations.settings.defaultProfile = profileId
+				self:BuildProfileManager()
+			end
+		else
+			profileMenu:AddItem("Unset as Default Profile").OnClick = function()
+				ConfigurationStructure.config.mutations.settings.defaultProfile = nil
+				self:BuildProfileManager()
+			end
 		end
 
 		profileMenu:AddItem("Copy").OnClick = function()
