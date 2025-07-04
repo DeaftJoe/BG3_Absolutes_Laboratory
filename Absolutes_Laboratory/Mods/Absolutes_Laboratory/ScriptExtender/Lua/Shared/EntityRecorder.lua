@@ -197,7 +197,7 @@ else
 	function EntityRecorder:RecordAndTeleport(level)
 		local recorderTracker = FileUtils:LoadTableFile(EntityRecorder.trackerFilename)
 
-		if next(recorderTracker) then
+		if recorderTracker and next(recorderTracker) then
 			for _, levelName in ipairs(self.Levels) do
 				if type(recorderTracker[levelName]) == "string" then
 					if level ~= levelName then

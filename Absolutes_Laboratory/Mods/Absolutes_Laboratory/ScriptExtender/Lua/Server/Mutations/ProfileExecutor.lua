@@ -21,7 +21,8 @@ Ext.Vars.RegisterModVariable(ModuleUUID, "HasDisabledProfiles", {
 MutationProfileExecutor = {}
 
 function MutationProfileExecutor:ExecuteProfile(rerunTransient)
-	if next(FileUtils:LoadTableFile(EntityRecorder.trackerFilename)) then
+	local trackerFile = FileUtils:LoadTableFile(EntityRecorder.trackerFilename)
+	if trackerFile and next(trackerFile) then
 		Logger:BasicInfo("Recorder is currently running - skipping Mutations")
 		return
 	end
