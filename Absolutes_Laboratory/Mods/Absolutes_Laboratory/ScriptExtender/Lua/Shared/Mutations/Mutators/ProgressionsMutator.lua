@@ -221,7 +221,7 @@ Progressions are evaluated independently from one another to allow for progressi
 				spellListLink.IDContext = spellListId
 				spellListLink.SameLine = true
 				spellListLink.OnClick = function()
-					SpellListDesigner:buildSpellDesignerWindow(spellListId)
+					SpellListDesigner:launch(spellListId)
 				end
 			end
 		end
@@ -321,7 +321,7 @@ if Ext.IsServer() then
 						if progressionConditonal.spellListDependencies and next(progressionConditonal.spellListDependencies) then
 							local numberMatched = 0
 							if entityVar.appliedMutators[SpellListMutator.name] and entityVar.appliedMutators[SpellListMutator.name].appliedLists then
-								for _, appliedSpellListId in pairs(entityVar.appliedMutators[SpellListMutator.name].appliedLists) do
+								for appliedSpellListId in pairs(entityVar.appliedMutators[SpellListMutator.name].appliedLists) do
 									if TableUtils:IndexOf(progressionConditonal.spellListDependencies, appliedSpellListId) then
 										numberMatched = numberMatched + 1
 									end

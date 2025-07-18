@@ -276,7 +276,7 @@ All %s in this group must add up to 100% - input is disabled if there is only 1 
 				spellListLink.IDContext = spellListId
 				spellListLink.SameLine = true
 				spellListLink.OnClick = function()
-					SpellListDesigner:buildSpellDesignerWindow(spellListId)
+					SpellListDesigner:launch(spellListId)
 				end
 			end
 		end
@@ -344,7 +344,7 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 				if classConditonal.spellListDependencies and next(classConditonal.spellListDependencies) then
 					local numberMatched = 0
 					if entityVar.appliedMutators[SpellListMutator.name] and entityVar.appliedMutators[SpellListMutator.name].appliedLists then
-						for _, appliedSpellListId in pairs(entityVar.appliedMutators[SpellListMutator.name].appliedLists) do
+						for appliedSpellListId in pairs(entityVar.appliedMutators[SpellListMutator.name].appliedLists) do
 							if TableUtils:IndexOf(classConditonal.spellListDependencies, appliedSpellListId) then
 								numberMatched = numberMatched + 1
 							end

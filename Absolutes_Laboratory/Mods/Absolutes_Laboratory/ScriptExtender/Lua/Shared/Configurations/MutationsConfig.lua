@@ -4,8 +4,8 @@ ConfigurationStructure.config.mutations = {}
 ---@class MutationSettings
 ConfigurationStructure.config.mutations.settings = {
 	defaultProfile = nil,
-	---@class SpellBrowserSettings
-	spellBrowser = {
+	---@class StatBrowserSettings
+	statBrowser = {
 		onlyIcons = true,
 		sort = {
 			---@type "displayName"|"spellName"
@@ -121,43 +121,42 @@ ConfigurationStructure.DynamicClassDefinitions.profileMutationRule = {
 ConfigurationStructure.config.mutations.profiles = {}
 --#endregion
 
---#region SpellList
----@type {[Guid]: SpellList}
-ConfigurationStructure.config.mutations.spellLists = {}
+--#region Lists
+---@alias EntryName string
 
----@alias SpellName string
-
----@class SpellSubLists
-ConfigurationStructure.DynamicClassDefinitions.spellSubLists = {
-	---@type SpellName[]?
+---@class CustomSubList
+ConfigurationStructure.DynamicClassDefinitions.customSubList = {
+	---@type EntryName[]?
 	guaranteed = nil,
-	---@type SpellName[]?
+	---@type EntryName[]?
 	randomized = nil,
-	---@type SpellName[]?
+	---@type EntryName[]?
 	startOfCombatOnly = nil,
-	---@type SpellName[]?
+	---@type EntryName[]?
 	onLoadOnly = nil,
-	---@type SpellName[]?
+	---@type EntryName[]?
 	blackListed = nil
 }
 
 ---@class LeveledSubList
----@field linkedProgressions {[Guid]: SpellSubLists}?
----@field selectedSpells SpellSubLists
+---@field linkedProgressions {[Guid]: CustomSubList}?
+---@field manuallySelectedEntries CustomSubList
 
----@class SpellList
-ConfigurationStructure.DynamicClassDefinitions.leveledSpellList = {
+---@class CustomList
+ConfigurationStructure.DynamicClassDefinitions.customLeveledList = {
 	name = "",
 	description = "",
 	---@type Guid?
 	modId = nil,
 	---@type LeveledSubList[]?
 	levels = nil,
+	---@type Guid[]?
+	spellListDependencies = nil,
 	---@type ModDependencies
 	modDependencies = nil
 }
 
-ConfigurationStructure.config.mutations.settings.spellLists = {
+ConfigurationStructure.config.mutations.settings.customLists = {
 	subListColours = {
 		guaranteed = { 0, 138, 172, 0.8 },
 		randomized = { 124, 14, 43, 0 },
@@ -166,5 +165,11 @@ ConfigurationStructure.config.mutations.settings.spellLists = {
 		blackListed = { .5, .5, .5, 1 },
 	}
 }
+
+---@type {[Guid]: CustomList}
+ConfigurationStructure.config.mutations.spellLists = {}
+
+---@type {[Guid]: CustomList}
+ConfigurationStructure.config.mutations.passiveLists = {}
 
 --#endregion

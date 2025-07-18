@@ -162,7 +162,15 @@ function Styler:SelectableText(parent, id, text)
 	return inputText
 end
 
-function Styler:ScaleFactor()
+---@param dimensionalArray number[]?
+---@return (number[]|number) dimensionalArray scaled up if present, otherwise it's the scale factor
+function Styler:ScaleFactor(dimensionalArray)
+	if dimensionalArray then
+		for i, v in ipairs(dimensionalArray) do
+			dimensionalArray[i] = v * Ext.IMGUI.GetViewportSize()[2] / 1440
+		end
+		return dimensionalArray
+	end
 	-- testing monitor for development is 1440p
 	return Ext.IMGUI.GetViewportSize()[2] / 1440
 end
@@ -205,7 +213,9 @@ end
 ---@return fun():boolean?
 function Styler:HyperlinkRenderable(renderable, item, modifier, modifierOnHover, altTooltip, callback)
 	-- Used in MutationDesigner to ensure hover events fire for links when viewing mod-added mutations
-	renderable.UserData = "EnableForMods"
+	if not renderable.UserData then
+		renderable.UserData = "EnableForMods"
+	end
 
 	---@type ExtuiTooltip
 	local tooltip = renderable:Tooltip()
@@ -256,7 +266,7 @@ function Styler:HyperlinkRenderable(renderable, item, modifier, modifierOnHover,
 			window = Ext.IMGUI.NewWindow(item)
 			window.HorizontalScrollbar = true
 			window:SetStyle("WindowMinSize", 100 * self:ScaleFactor(), 100 * self:ScaleFactor())
-			window:SetSize({0, 0}, "FirstUseEver")
+			window:SetSize({ 0, 0 }, "FirstUseEver")
 			window.Closeable = true
 
 			window.OnClose = function()

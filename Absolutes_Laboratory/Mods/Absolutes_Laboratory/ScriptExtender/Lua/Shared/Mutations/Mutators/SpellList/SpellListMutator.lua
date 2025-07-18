@@ -18,12 +18,12 @@ end
 ---@class LeveledSpellPool
 ---@field anchorLevel number
 ---@field spellLists Guid[]
----@field spells SpellSubLists?
+---@field spells CustomSubList?
 
 ---@class SpellMutatorGroup
 ---@field leveledSpellPool LeveledSpellPool[]?
 ---@field criteria SpellListCriteriaEntry?
----@field removeSpells {[number]: SpellSourceType|SpellName}
+---@field removeSpells {[number]: SpellSourceType|EntryName}
 ---@field randomizedSpellPoolSize number[]
 
 ---@class SpellListMutator : Mutator
@@ -38,7 +38,7 @@ function SpellListMutator:renderMutator(parent, mutator)
 	local spellListDesignerButton = parent:AddButton("Open SpellList Designer")
 	spellListDesignerButton.UserData = "EnableForMods"
 	spellListDesignerButton.OnClick = function()
-		SpellListDesigner:buildSpellDesignerWindow()
+		SpellListDesigner:launch()
 	end
 
 	local displayTable = parent:AddTable("SpellList", 2)
@@ -75,7 +75,7 @@ function SpellListMutator:renderMutator(parent, mutator)
 				end) do
 					local cell = leveledTable:AddRow():AddCell()
 
-					local delete = Styler:ImageButton(cell:AddImageButton("delete" .. mutator.targetProperty, "ico_red_x", { 16, 16 }))
+					local delete = Styler:ImageButton(cell:AddImageButton("delete" .. mutator.targetProperty, "ico_red_x", Styler:ScaleFactor({ 16, 16 })))
 					delete.OnClick = function()
 						for x = i, TableUtils:CountElements(spellMutatorGroup.leveledSpellPool) do
 							spellMutatorGroup.leveledSpellPool[x].delete = true
@@ -116,7 +116,7 @@ function SpellListMutator:renderMutator(parent, mutator)
 						if spellList then
 							local text = cell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (%s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
 							text.OnClick = function()
-								SpellListDesigner:buildSpellDesignerWindow(spellListId)
+								SpellListDesigner:launch(spellListId)
 							end
 
 							if spellList.description ~= "" then
@@ -240,7 +240,7 @@ end
 ---@param poolIndex number
 function SpellListMutator:buildSpellSelectorSection(parent, mutatorGroup, poolIndex)
 	if not next(SpellListDesigner.subListIndex.guaranteed.colour) then
-		for subListName, colour in TableUtils:OrderedPairs(ConfigurationStructure.config.mutations.settings.spellLists.subListColours, function(key)
+		for subListName, colour in TableUtils:OrderedPairs(ConfigurationStructure.config.mutations.settings.customLists.subListColours, function(key)
 			return SpellListDesigner.subListIndex[key].name
 		end) do
 			SpellListDesigner.subListIndex[subListName].colour = Styler:ConvertRGBAToIMGUI(colour._real)
@@ -260,7 +260,7 @@ function SpellListMutator:buildSpellSelectorSection(parent, mutatorGroup, poolIn
 
 		if mutatorGroup.leveledSpellPool[poolIndex].spells then
 			local counter = 0
-			---@type SpellSubLists
+			---@type CustomSubList
 			local spellSubLists = mutatorGroup.leveledSpellPool[poolIndex].spells
 			for spellList, spellPool in TableUtils:OrderedPairs(spellSubLists) do
 				for index, spellName in TableUtils:OrderedPairs(spellPool, function(_, value)
@@ -341,7 +341,8 @@ function SpellListMutator:buildSpellSelectorSection(parent, mutatorGroup, poolIn
 
 		Helpers:KillChildren(popup)
 
-		SpellBrowser:Render(popup,
+		StatBrowser:Render("SpellData",
+			popup,
 			nil,
 			function(pos)
 				return pos % 7 ~= 0
@@ -369,7 +370,7 @@ function SpellListMutator:buildSpellSelectorSection(parent, mutatorGroup, poolIn
 				if not subList then
 					pool.spells = pool.spells or {
 						guaranteed = {}
-					} --[[@as SpellSubLists]]
+					} --[[@as CustomSubList]]
 
 					pool.spells.guaranteed = pool.spells.guaranteed or {}
 
@@ -760,7 +761,8 @@ SpellSet are specified in the template under the same name, SpellSet2 are added 
 
 		popup:AddSeparatorText("Search Spells")
 
-		SpellBrowser:Render(popup,
+		StatBrowser:Render("SpellData",
+			popup,
 			nil,
 			function(pos)
 				return pos % 8 ~= 0
@@ -823,8 +825,6 @@ function SpellListMutator:handleDependencies(export, mutator, removeMissingDepen
 		end
 	end
 
-	local progressionSources = Ext.StaticData.GetSources("Progression")
-
 	for _, spellGroup in pairs(mutator.values) do
 		if spellGroup.removeSpells then
 			for i, spellToRemove in pairs(spellGroup.removeSpells) do
@@ -849,92 +849,7 @@ function SpellListMutator:handleDependencies(export, mutator, removeMissingDepen
 				end
 
 				if leveledSpellPool.spellLists then
-					for l, spellListId in pairs(leveledSpellPool.spellLists) do
-						local spellListModId = MutationConfigurationProxy.spellLists[spellListId].modId
-						if not spellListModId then
-							--- @type SpellList
-							local spellListDef = removeMissingDependencies == true
-								and export.spellLists[spellListId]
-								or TableUtils:DeeplyCopyTable(ConfigurationStructure.config.mutations.spellLists[spellListId]._real)
-
-							spellListId = spellListId .. "Exported"
-							leveledSpellPool.spellLists[l] = spellListId
-
-							if spellListDef.levels then
-								for level, levelSubList in pairs(spellListDef.levels) do
-									if levelSubList.linkedProgressions then
-										for progressionTableId, sublists in pairs(levelSubList.linkedProgressions) do
-											for _, spells in pairs(sublists) do
-												for i, spell in pairs(spells) do
-													if not buildSpellDep(spell) then
-														spells[i] = nil
-													end
-												end
-												TableUtils:ReindexNumericTable(spells)
-											end
-
-											local progressionId = SpellListDesigner.progressionTableToProgression[progressionTableId][level]
-											if progressionId then
-												---@type ResourceProgression
-												local progression = Ext.StaticData.Get(progressionId, "Progression")
-												if not progression then
-													levelSubList.linkedProgressions[progressionId] = nil
-												elseif not removeMissingDependencies then
-													local progressionSource = TableUtils:IndexOf(progressionSources, function(value)
-														return TableUtils:IndexOf(value, progressionId) ~= nil
-													end)
-													if progressionSource then
-														spellListDef.modDependencies = spellListDef.modDependencies or {}
-														if not spellListDef.modDependencies[progressionSource] then
-															local name, author, version = Helpers:BuildModFields(progressionSource)
-															if author == "Larian" then
-																goto continue
-															end
-															spellListDef.modDependencies[progressionSource] = {
-																modName = name,
-																modAuthor = author,
-																modVersion = version,
-																modId = progressionSource,
-																packagedItems = {}
-															}
-														end
-														spellListDef.modDependencies[progressionSource].packagedItems[progressionId] = progression.Name
-													end
-													::continue::
-												end
-											end
-										end
-									end
-
-									if levelSubList.selectedSpells then
-										for _, spells in pairs(levelSubList.selectedSpells) do
-											for i, spell in pairs(spells) do
-												if not buildSpellDep(spell, spellListDef) then
-													spells[i] = nil
-												end
-											end
-											TableUtils:ReindexNumericTable(spells)
-										end
-									end
-								end
-							end
-
-							export.spellLists = export.spellLists or {}
-							if not export.spellLists[spellListId] then
-								export.spellLists[spellListId] = spellListDef
-							end
-						else
-							local name, author, version = Helpers:BuildModFields(spellListModId)
-							mutator.modDependencies = mutator.modDependencies or {}
-							mutator.modDependencies[spellListModId] = {
-								modAuthor = author,
-								modName = name,
-								modVersion = version,
-								modId = spellListModId,
-								packagedItems = nil
-							}
-						end
-					end
+					SpellListDesigner:HandleDependences(export, mutator, leveledSpellPool.spellLists, removeMissingDependencies)
 				end
 			end
 		end
@@ -1024,8 +939,8 @@ if Ext.IsServer() then
 
 	---@class SpellListOriginalValues
 	---@field removedSpells SpellSpellMeta[]
-	---@field addedSpells SpellName[]
-	---@field castedSpells SpellName[]
+	---@field addedSpells EntryName[]
+	---@field castedSpells EntryName[]
 
 	function SpellListMutator:undoMutator(entity, mutator)
 		entity.Vars[SPELL_MUTATOR_ON_COMBAT_START] = nil
@@ -1111,7 +1026,7 @@ if Ext.IsServer() then
 		end
 	end
 
-	---@param subLists SpellSubLists
+	---@param subLists CustomSubList
 	---@param entity EntityHandle
 	---@param addSpells {[EntityHandle]: SpellSpellMeta[]}
 	function SpellListMutator:processSubLists(subLists, entity, addSpells, castedSpells)
@@ -1132,7 +1047,7 @@ if Ext.IsServer() then
 							PreferredCastingResource = "d136c5d9-0ff0-43da-acce-a74a07f8d6bf",
 							SpellCastingAbility = entity.Stats.SpellCastingAbility
 						}
-						Logger:BasicDebug("Added spell %s", spellName)
+						Logger:BasicDebug("Added guaranteed spell %s", spellName)
 					end
 				elseif subListName == "startOfCombatOnly" then
 					if Osi.IsInCombat(entity.Uuid.EntityUuid) == 1 then
@@ -1196,9 +1111,8 @@ if Ext.IsServer() then
 							if (condition.comparator == "gte" and score < condition.value)
 								or (condition.comparator == "lte" and score > condition.value)
 							then
-								Logger:BasicDebug("Skipped Group %s on %s due to %s being %s than %s (was %s)",
+								Logger:BasicDebug("Skipped Group %s due to %s being %s than %s (was %s)",
 									g,
-									entity.Uuid.EntityUuid,
 									ability,
 									condition.comparator == "gte" and "less than" or "greater than",
 									condition.value,
@@ -1218,7 +1132,7 @@ if Ext.IsServer() then
 								end
 							end
 						end
-						Logger:BasicDebug("Skipped Group %s on %s due to not being one of the right classes", g, entity.Uuid.EntityUuid)
+						Logger:BasicDebug("Skipped Group %s due to entity not being one of the right classes", g)
 						spellListMutators[g] = nil
 						goto next_group
 
@@ -1287,8 +1201,12 @@ if Ext.IsServer() then
 				end
 			end
 
-			---@type Guid[]
+			--- {maxLevelOfAssignedSpellList : spellListId}
+			---@alias AppliedSpellLists Guid[]
+			---@type AppliedSpellLists
 			local appliedLists = {}
+
+			local trueAppliedLists = {}
 
 			for lSP, leveledSpellPool in ipairs(spellMutatorGroup.leveledSpellPool) do
 				if entity.AvailableLevel and entity.AvailableLevel.Level >= leveledSpellPool.anchorLevel then
@@ -1310,7 +1228,7 @@ if Ext.IsServer() then
 
 						if spellListId and MutationConfigurationProxy.spellLists[spellListId] then
 							local nextAnchor = math.min((spellMutatorGroup.leveledSpellPool[lSP + 1] and spellMutatorGroup.leveledSpellPool[lSP + 1].anchorLevel - 1) or 30,
-								entity.AvailableLevel.Level)
+								entity.EocLevel.Level)
 
 							local maxAppliedLevel = 0
 							for level in pairs(appliedLists) do
@@ -1321,13 +1239,14 @@ if Ext.IsServer() then
 							local startingSpellListLevel = (TableUtils:IndexOf(appliedLists, spellListId) or 1)
 
 							if TableUtils:IndexOf(appliedLists, spellListId) then
-								startingSpellListLevel = startingSpellListLevel + 1
 								appliedLists[startingSpellListLevel] = nil
+								startingSpellListLevel = startingSpellListLevel + 1
 								maxAppliedLevel = 0
 							end
 							appliedLists[nextAnchor] = spellListId
 
-							local cLevel = nextAnchor == maxAppliedLevel + 1 and nextAnchor or nextAnchor - maxAppliedLevel
+							local cLevel = nextAnchor - maxAppliedLevel
+							trueAppliedLists[spellListId] = (trueAppliedLists[spellListId] or 0) + math.max(1, (cLevel - startingSpellListLevel))
 
 							local spellList = MutationConfigurationProxy.spellLists[spellListId]
 							Logger:BasicDebug("Selected spellList %s (%s) for anchor level %s, using levels %s-%s",
@@ -1339,17 +1258,17 @@ if Ext.IsServer() then
 
 							for i = startingSpellListLevel, cLevel do
 								local leveledLists = spellList.levels[i]
-								---@type SpellName[]
+								---@type EntryName[]
 								local randomPool = {}
 								if leveledLists then
 									if leveledLists.linkedProgressions then
 										for progressionId, subLists in pairs(leveledLists.linkedProgressions) do
 											self:processSubLists(subLists, entity, addSpells, origValues.castedSpells)
 
-											if SpellListDesigner.progressionTranslation[progressionId] then
-												local progressionTable = SpellListDesigner.progressions[SpellListDesigner.progressionTranslation[progressionId]]
-												if progressionTable and progressionTable[i] then
-													for _, spellName in pairs(progressionTable[i]) do
+											if SpellListDesigner.progressionTranslations[progressionId] then
+												local progressionTable = SpellListDesigner.progressions[SpellListDesigner.progressionTranslations[progressionId]]
+												if progressionTable and progressionTable[i] and progressionTable[i][SpellListDesigner.name] then
+													for _, spellName in pairs(progressionTable[i][SpellListDesigner.name]) do
 														if not TableUtils:IndexOf(subLists.blackListed, spellName) then
 															table.insert(randomPool, spellName)
 														end
@@ -1359,11 +1278,11 @@ if Ext.IsServer() then
 										end
 									end
 
-									if leveledLists.selectedSpells then
-										self:processSubLists(leveledLists.selectedSpells, entity, addSpells, origValues.castedSpells)
+									if leveledLists.manuallySelectedEntries then
+										self:processSubLists(leveledLists.manuallySelectedEntries, entity, addSpells, origValues.castedSpells)
 
-										if leveledLists.selectedSpells.randomized then
-											for _, spellName in pairs(leveledLists.selectedSpells.randomized) do
+										if leveledLists.manuallySelectedEntries.randomized then
+											for _, spellName in pairs(leveledLists.manuallySelectedEntries.randomized) do
 												if not TableUtils:IndexOf(entity.SpellBook.Spells, function(value)
 														return value.Id.OriginatorPrototype == spellName
 													end)
@@ -1428,7 +1347,7 @@ if Ext.IsServer() then
 				end
 			end
 
-			entityVar.appliedMutators[self.name].appliedLists = appliedLists
+			entityVar.appliedMutators[self.name].appliedLists = trueAppliedLists
 		else
 			entityVar.appliedMutators[self.name] = nil
 			entityVar.originalValues[self.name] = nil
