@@ -313,6 +313,47 @@ All %s in this group must add up to 100% - input is disabled if there is only 1 
 	end
 end
 
+---@param mutator ClassesAndSubclassesMutator
+function ClassesAndSubclassesMutator:handleDependencies(_, mutator, removeMissingDependencies)
+	local classesIndex = Ext.StaticData.GetSources("ClassDescription")
+	for c, classGroup in pairs(mutator.values) do
+		for classId in pairs(classGroup.classIds) do
+			---@type ResourceClassDescription
+			local class = Ext.StaticData.Get(classId, "ClassDescription")
+			if not class then
+				classGroup.classIds[classId] = nil
+				if not classGroup.classIds() then
+					mutator.values[c].delete = true
+				end
+			elseif not removeMissingDependencies then
+				local classSource = TableUtils:IndexOf(classesIndex, function(value)
+					return TableUtils:IndexOf(value, classId) ~= nil
+				end)
+				if classSource then
+					mutator.modDependencies = mutator.modDependencies or {}
+					if not mutator.modDependencies[classSource] then
+						local name, author, version = Helpers:BuildModFields(classSource)
+						if author == "Larian" then
+							goto continue
+						end
+						mutator.modDependencies[classSource] = {
+							modName = name,
+							modAuthor = author,
+							modVersion = version,
+							modId = classSource,
+							packagedItems = {}
+						}
+					end
+
+					mutator.modDependencies[classSource].packagedItems[classId] = class.DisplayName:Get() or class.Name
+				end
+				::continue::
+			end
+		end
+	end
+	TableUtils:ReindexNumericTable(mutator.values)
+end
+
 function ClassesAndSubclassesMutator:undoMutator(entity, entityVar)
 	entity.Classes.Classes = {}
 	for _, classDef in pairs(entityVar.originalValues[self.name]) do
@@ -372,45 +413,47 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 		Logger:BasicDebug("%s potential class groups were identified - randomly choosing one", #chosenClassGroups)
 		---@type ClassesConditionalGroup
 		local classGroup = chosenClassGroups[math.random(#chosenClassGroups)]
-		entityVar.originalValues[self.name] = Ext.Types.Serialize(entity.Classes.Classes)
+		if classGroup.classIds then
+			entityVar.originalValues[self.name] = Ext.Types.Serialize(entity.Classes.Classes)
 
-		entity.Classes.Classes = {}
+			entity.Classes.Classes = {}
 
-		local classesLeft = TableUtils:CountElements(classGroup.classIds)
-		local classLevelsLeft = entity.AvailableLevel.Level
-		for classId, levelPercentage in pairs(classGroup.classIds) do
-			---@type ResourceClassDescription
-			local class = Ext.StaticData.Get(classId, "ClassDescription")
-			local hasParentClass = Ext.StaticData.Get(class.ParentGuid, "ClassDescription") ~= nil
+			local classesLeft = TableUtils:CountElements(classGroup.classIds)
+			local classLevelsLeft = entity.AvailableLevel.Level
+			for classId, levelPercentage in pairs(classGroup.classIds) do
+				---@type ResourceClassDescription
+				local class = Ext.StaticData.Get(classId, "ClassDescription")
+				local hasParentClass = Ext.StaticData.Get(class.ParentGuid, "ClassDescription") ~= nil
 
-			if classesLeft == 1 then
-				entity.Classes.Classes[#entity.Classes.Classes + 1] = {
-					ClassUUID = hasParentClass and class.ParentGuid or classId,
-					Level = classLevelsLeft,
-					SubClassUUID = hasParentClass and classId or nil
-				}
-				Logger:BasicDebug("Added class %s at level %s", class.DisplayName:Get() or class.Name, classLevelsLeft)
-			else
-				local desiredClassLevel = math.ceil(entity.AvailableLevel.Level * (levelPercentage / 100))
-				if desiredClassLevel > 0 then
+				if classesLeft == 1 then
 					entity.Classes.Classes[#entity.Classes.Classes + 1] = {
 						ClassUUID = hasParentClass and class.ParentGuid or classId,
-						Level = desiredClassLevel,
+						Level = classLevelsLeft,
 						SubClassUUID = hasParentClass and classId or nil
 					}
+					Logger:BasicDebug("Added class %s at level %s", class.DisplayName:Get() or class.Name, classLevelsLeft)
+				else
+					local desiredClassLevel = math.ceil(entity.AvailableLevel.Level * (levelPercentage / 100))
+					if desiredClassLevel > 0 then
+						entity.Classes.Classes[#entity.Classes.Classes + 1] = {
+							ClassUUID = hasParentClass and class.ParentGuid or classId,
+							Level = desiredClassLevel,
+							SubClassUUID = hasParentClass and classId or nil
+						}
 
-					Logger:BasicDebug("Added class %s at level %s", class.DisplayName:Get() or class.Name, desiredClassLevel)
-					classLevelsLeft = classLevelsLeft - desiredClassLevel
+						Logger:BasicDebug("Added class %s at level %s", class.DisplayName:Get() or class.Name, desiredClassLevel)
+						classLevelsLeft = classLevelsLeft - desiredClassLevel
+					end
+				end
+
+				classesLeft = classesLeft - 1
+				if classLevelsLeft == 0 then
+					break
 				end
 			end
 
-			classesLeft = classesLeft - 1
-			if classLevelsLeft == 0 then
-				break
-			end
+			entity:Replicate("Classes")
 		end
-
-		entity:Replicate("Classes")
 	else
 		Logger:BasicDebug("No class groups were chosen - finishing early")
 	end
