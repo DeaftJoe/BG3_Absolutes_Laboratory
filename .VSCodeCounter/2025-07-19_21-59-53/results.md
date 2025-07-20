@@ -1,48 +1,48 @@
 # Summary
 
-Date : 2025-07-18 20:27:28
+Date : 2025-07-19 21:59:53
 
 Directory d:\\Mods\\BG3 Modder MultiTool\\Absolutes_Laboratory\\Absolutes_Laboratory\\Mods\\Absolutes_Laboratory\\ScriptExtender\\Lua
 
-Total : 79 files,  23201 codes, 21928 comments, 8801 blanks, all 53930 lines
+Total : 80 files,  23433 codes, 21958 comments, 8858 blanks, all 54249 lines
 
 Summary / [Details](details.md) / [Diff Summary](diff.md) / [Diff Details](diff-details.md)
 
 ## Languages
 | language | files | code | comment | blank | total |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Lua | 78 | 23,183 | 21,928 | 8,788 | 53,899 |
+| Lua | 79 | 23,415 | 21,958 | 8,845 | 54,218 |
 | Markdown | 1 | 18 | 0 | 13 | 31 |
 
 ## Directories
 | path | files | code | comment | blank | total |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| . | 79 | 23,201 | 21,928 | 8,801 | 53,930 |
+| . | 80 | 23,433 | 21,958 | 8,858 | 54,249 |
 | . (Files) | 2 | 25 | 0 | 10 | 35 |
-| Client | 36 | 5,039 | 350 | 830 | 6,219 |
+| Client | 36 | 5,044 | 350 | 830 | 6,224 |
 | Client (Files) | 3 | 444 | 67 | 81 | 592 |
-| Client\\Inspector | 29 | 2,017 | 108 | 289 | 2,414 |
+| Client\\Inspector | 29 | 2,022 | 108 | 289 | 2,419 |
 | Client\\Inspector (Files) | 2 | 264 | 22 | 54 | 340 |
-| Client\\Inspector\\EntityProcessors | 7 | 298 | 16 | 49 | 363 |
+| Client\\Inspector\\EntityProcessors | 7 | 299 | 16 | 49 | 364 |
 | Client\\Inspector\\EntityProcessors (Files) | 1 | 45 | 5 | 10 | 60 |
-| Client\\Inspector\\EntityProcessors\\Proxies | 6 | 253 | 11 | 39 | 303 |
-| Client\\Inspector\\ResourceProcessors | 20 | 1,455 | 70 | 186 | 1,711 |
+| Client\\Inspector\\EntityProcessors\\Proxies | 6 | 254 | 11 | 39 | 304 |
+| Client\\Inspector\\ResourceProcessors | 20 | 1,459 | 70 | 186 | 1,715 |
 | Client\\Inspector\\ResourceProcessors (Files) | 1 | 254 | 28 | 42 | 324 |
-| Client\\Inspector\\ResourceProcessors\\Proxies | 19 | 1,201 | 42 | 144 | 1,387 |
+| Client\\Inspector\\ResourceProcessors\\Proxies | 19 | 1,205 | 42 | 144 | 1,391 |
 | Client\\Mutations | 4 | 2,578 | 175 | 460 | 3,213 |
-| Server | 2 | 144 | 6 | 32 | 182 |
+| Server | 2 | 147 | 6 | 33 | 186 |
 | Server (Files) | 1 | 33 | 2 | 11 | 46 |
-| Server\\Mutations | 1 | 111 | 4 | 21 | 136 |
-| Shared | 23 | 5,336 | 564 | 1,024 | 6,924 |
+| Server\\Mutations | 1 | 114 | 4 | 22 | 140 |
+| Shared | 24 | 5,560 | 594 | 1,080 | 7,234 |
 | Shared (Files) | 2 | 251 | 23 | 51 | 325 |
-| Shared\\Configurations | 2 | 214 | 94 | 49 | 357 |
-| Shared\\Mutations | 19 | 4,871 | 447 | 924 | 6,242 |
+| Shared\\Configurations | 2 | 214 | 103 | 51 | 368 |
+| Shared\\Mutations | 20 | 5,095 | 468 | 978 | 6,541 |
 | Shared\\Mutations (Files) | 1 | 73 | 8 | 13 | 94 |
 | Shared\\Mutations\\External | 1 | 150 | 13 | 21 | 184 |
-| Shared\\Mutations\\Mutators | 11 | 3,468 | 283 | 662 | 4,413 |
-| Shared\\Mutations\\Mutators (Files) | 5 | 1,310 | 134 | 310 | 1,754 |
+| Shared\\Mutations\\Mutators | 12 | 3,692 | 304 | 716 | 4,712 |
+| Shared\\Mutations\\Mutators (Files) | 6 | 1,590 | 156 | 364 | 2,110 |
 | Shared\\Mutations\\Mutators\\PassiveList | 2 | 492 | 31 | 79 | 602 |
-| Shared\\Mutations\\Mutators\\SpellList | 2 | 1,213 | 89 | 199 | 1,501 |
+| Shared\\Mutations\\Mutators\\SpellList | 2 | 1,157 | 88 | 199 | 1,444 |
 | Shared\\Mutations\\Mutators\\StatusList | 2 | 453 | 29 | 74 | 556 |
 | Shared\\Mutations\\Selectors | 6 | 1,180 | 143 | 228 | 1,551 |
 | Utilities | 16 | 12,657 | 21,008 | 6,905 | 40,570 |

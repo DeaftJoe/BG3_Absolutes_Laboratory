@@ -153,7 +153,7 @@ ConfigurationStructure.DynamicClassDefinitions.customLeveledList = {
 	---@type Guid[]?
 	spellListDependencies = nil,
 	---@type ModDependencies
-	modDependencies = nil
+	modDependencies = nil,
 }
 
 ConfigurationStructure.config.mutations.settings.customLists = {
@@ -166,7 +166,18 @@ ConfigurationStructure.config.mutations.settings.customLists = {
 	}
 }
 
----@type {[Guid]: CustomList}
+---@class AbilityPriorities
+---@field primaryStat AbilityId
+---@field secondaryStat AbilityId
+---@field tertiaryStat AbilityId
+---@field fourth AbilityId
+---@field fifth AbilityId
+---@field sixth AbilityId
+
+---@class SpellList : CustomList
+---@field abilityPriorities AbilityPriorities
+
+---@type {[Guid]: SpellList}
 ConfigurationStructure.config.mutations.spellLists = {}
 
 ---@type {[Guid]: CustomList}

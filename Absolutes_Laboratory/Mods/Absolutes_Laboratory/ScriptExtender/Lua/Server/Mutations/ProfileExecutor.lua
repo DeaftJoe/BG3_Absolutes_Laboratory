@@ -122,10 +122,14 @@ function MutationProfileExecutor:ExecuteProfile(rerunTransient)
 	end
 end
 
-Ext.RegisterConsoleCommand("TraceEntities", function(cmd, ...)
+Ext.RegisterConsoleCommand("Lab_TraceEntities", function(cmd, ...)
 	ECSLogger:ClearLogFile()
 	Printer:Start(100, ...)
 	MutationProfileExecutor:ExecuteProfile()
+end)
+
+Ext.RegisterConsoleCommand("Lab_TestTransient", function(cmd, ...)
+	MutationProfileExecutor:ExecuteProfile(true)
 end)
 
 Ext.Osiris.RegisterListener("LevelGameplayReady", 2, "after", function(levelName, isEditorMode)
