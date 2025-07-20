@@ -12,10 +12,16 @@ function ClassesAndSubclassesMutator:Transient()
 	return true
 end
 
+---@class ClassAbilityOverrides
+---@field rangedAttackAbility AbilityId
+---@field spellCastingAbility AbilityId
+---@field unarmedAttackAbility AbilityId
+
 ---@class ClassesConditionalGroup
 ---@field classIds {[Guid] : number}?
 ---@field spellListDependencies Guid[]?
 ---@field numberOfSpellLists number?
+---@field statAbilityOverrides ClassAbilityOverrides?
 
 ---@class ClassesAndSubclassesMutator : Mutator
 ---@field values ClassesConditionalGroup[]
@@ -305,6 +311,45 @@ All %s in this group must add up to 100% - input is disabled if there is only 1 
 				end
 			end
 		end
+
+		conditionalCell:AddSeparatorText("Ability Overrides ( ? )"):Tooltip():AddText("\t If any of the below are not specified, the entity's default value will be preserved")
+		local abilities = { "None", "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma", "Sentinel" }
+
+		local abilityOverrideTable = conditionalCell:AddTable("AbilityOverride", 2)
+		abilityOverrideTable.SizingFixedFit = true
+
+		local abilityFields = {
+			{ label = "Spell Casting Ability",  field = "spellCastingAbility" },
+			{ label = "Ranged Attack Ability",  field = "rangedAttackAbility" },
+			{ label = "Unarmed Attack Ability", field = "unarmedAttackAbility" }
+		}
+
+		for _, abilityConfig in ipairs(abilityFields) do
+			local row = abilityOverrideTable:AddRow()
+			row:AddCell():AddText(abilityConfig.label)
+			local combo = row:AddCell():AddCombo("")
+			combo.WidthFitPreview = true
+			combo.Options = abilities
+			combo.SelectedIndex = (classConditionalGroup.statAbilityOverrides
+				and TableUtils:IndexOf(abilities, classConditionalGroup.statAbilityOverrides[abilityConfig.field])
+				or 0) - 1
+
+			combo.OnChange = function()
+				local val = combo.Options[combo.SelectedIndex + 1]
+				if val == "None" then
+					if classConditionalGroup.statAbilityOverrides then
+						classConditionalGroup.statAbilityOverrides[abilityConfig.field] = nil
+						if not classConditionalGroup.statAbilityOverrides() then
+							classConditionalGroup.statAbilityOverrides.delete = true
+						end
+					end
+					combo.SelectedIndex = -1
+				else
+					classConditionalGroup.statAbilityOverrides = classConditionalGroup.statAbilityOverrides or {}
+					classConditionalGroup.statAbilityOverrides[abilityConfig.field] = val
+				end
+			end
+		end
 	end
 
 	parent:AddButton("Add Class Group").OnClick = function()
@@ -356,7 +401,7 @@ end
 
 function ClassesAndSubclassesMutator:undoMutator(entity, entityVar)
 	entity.Classes.Classes = {}
-	for _, classDef in pairs(entityVar.originalValues[self.name]) do
+	for _, classDef in pairs(entityVar.originalValues[self.name].classes) do
 		---@cast classDef ClassInfo
 		entity.Classes.Classes[#entity.Classes.Classes + 1] = {
 			ClassUUID = classDef.ClassUUID,
@@ -364,9 +409,23 @@ function ClassesAndSubclassesMutator:undoMutator(entity, entityVar)
 			Level = classDef.Level
 		}
 	end
-	entity:Replicate("Classes")
 
-	Logger:BasicTrace("Reverted to %s", entityVar.originalValues[self.name])
+	Logger:BasicDebug("Reverted classes to %s", entityVar.originalValues[self.name].classes)
+
+	if entityVar.originalValues[self.name].spellCastingAbility then
+		Logger:BasicDebug("Reverted spellCastingAbility to %s", entityVar.originalValues[self.name].spellCastingAbility)
+		entity.Stats.SpellCastingAbility = entityVar.originalValues[self.name].spellCastingAbility
+	end
+	
+	if entityVar.originalValues[self.name].rangedAttackAbility then
+		Logger:BasicDebug("Reverted rangedAttackAbility to %s", entityVar.originalValues[self.name].rangedAttackAbility)
+		entity.Stats.RangedAttackAbility = entityVar.originalValues[self.name].rangedAttackAbility
+	end
+
+	if entityVar.originalValues[self.name].unarmedAttackAbility then
+		Logger:BasicDebug("Reverted unarmedAttackAbility to %s", entityVar.originalValues[self.name].unarmedAttackAbility)
+		entity.Stats.UnarmedAttackAbility = entityVar.originalValues[self.name].unarmedAttackAbility
+	end
 end
 
 function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
@@ -414,7 +473,9 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 		---@type ClassesConditionalGroup
 		local classGroup = chosenClassGroups[math.random(#chosenClassGroups)]
 		if classGroup.classIds then
-			entityVar.originalValues[self.name] = Ext.Types.Serialize(entity.Classes.Classes)
+			entityVar.originalValues[self.name] = {
+				classes = Ext.Types.Serialize(entity.Classes.Classes)
+			}
 
 			entity.Classes.Classes = {}
 
@@ -452,9 +513,29 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 				end
 			end
 
-			entity:Replicate("Classes")
+			if classGroup.statAbilityOverrides then
+				if classGroup.statAbilityOverrides.spellCastingAbility and entity.Stats.SpellCastingAbility ~= classGroup.statAbilityOverrides.spellCastingAbility then
+					entityVar.originalValues[self.name].spellCastingAbility = entity.Stats.SpellCastingAbility
+					entity.Stats.SpellCastingAbility = classGroup.statAbilityOverrides.spellCastingAbility
+				end
+
+				if classGroup.statAbilityOverrides.rangedAttackAbility and entity.Stats.RangedAttackAbility ~= classGroup.statAbilityOverrides.rangedAttackAbility then
+					entityVar.originalValues[self.name].rangedAttackAbility = entity.Stats.RangedAttackAbility
+					entity.Stats.RangedAttackAbility = classGroup.statAbilityOverrides.rangedAttackAbility
+				end
+
+				if classGroup.statAbilityOverrides.unarmedAttackAbility and entity.Stats.UnarmedAttackAbility ~= classGroup.statAbilityOverrides.unarmedAttackAbility then
+					entityVar.originalValues[self.name].unarmedAttackAbility = entity.Stats.UnarmedAttackAbility
+					entity.Stats.UnarmedAttackAbility = classGroup.statAbilityOverrides.unarmedAttackAbility
+				end
+			end
 		end
 	else
 		Logger:BasicDebug("No class groups were chosen - finishing early")
 	end
+end
+
+function ClassesAndSubclassesMutator:FinalizeMutator(entity)
+	entity:Replicate("Classes")
+	entity:Replicate("Stats")
 end
