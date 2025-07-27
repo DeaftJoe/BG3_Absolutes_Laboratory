@@ -412,7 +412,7 @@ function StatusListMutator:applyMutator(entity, entityVar)
 				if statusList then
 					if statusList.spellListDependencies and next(statusList.spellListDependencies) then
 						for _, spellListDependency in ipairs(statusList.spellListDependencies) do
-							if entityVar.appliedMutators[SpellListMutator.name].appliedLists[spellListDependency] then
+							if entityVar.appliedMutators[SpellListMutator.name] and entityVar.appliedMutators[SpellListMutator.name].appliedLists[spellListDependency] then
 								if not usingListsWithSpellListDeps then
 									statusListsPool = {}
 									usingListsWithSpellListDeps = true

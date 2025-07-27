@@ -442,7 +442,7 @@ function PassiveListMutator:applyMutator(entity, entityVar)
 				if passiveList then
 					if passiveList.spellListDependencies and next(passiveList.spellListDependencies) then
 						for _, spellListDependency in ipairs(passiveList.spellListDependencies) do
-							if entityVar.appliedMutators[SpellListMutator.name].appliedLists[spellListDependency] then
+							if entityVar.appliedMutators[SpellListMutator.name] and entityVar.appliedMutators[SpellListMutator.name].appliedLists[spellListDependency] then
 								if not usingListsWithSpellListDeps then
 									passiveListsPool = {}
 									usingListsWithSpellListDeps = true
