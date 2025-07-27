@@ -16,7 +16,6 @@ SpellListDesigner = ListDesignerBaseClass:new("Spell List",
 		end
 	end)
 
-
 function SpellListDesigner:buildBrowser()
 	if not self.browserTabs["SpellData"] then
 		self.browserTabs["SpellData"] = self.browserTabParent:AddTabItem("Spells"):AddChildWindow("Spell Browser")

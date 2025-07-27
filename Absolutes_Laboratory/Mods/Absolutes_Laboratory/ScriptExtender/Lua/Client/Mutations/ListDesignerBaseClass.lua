@@ -322,7 +322,6 @@ function ListDesignerBaseClass:buildModLists(activeListID)
 						self.activeListHandle = spellListSelect
 						self.activeList = list
 
-						self.browserTabParent.Visible = false
 						self:buildBrowser()
 						self:buildDesigner()
 					end
