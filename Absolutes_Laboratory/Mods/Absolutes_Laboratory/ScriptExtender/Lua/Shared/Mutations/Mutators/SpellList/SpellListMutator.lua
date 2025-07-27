@@ -1346,6 +1346,7 @@ if Ext.IsServer() then
 											SpellCastingAbility = entity.Stats.SpellCastingAbility
 										}
 
+										origValues.addedSpells = origValues.addedSpells or {}
 										table.insert(origValues.addedSpells, spellName)
 										Logger:BasicDebug("Added spell %s", spellName)
 									end
