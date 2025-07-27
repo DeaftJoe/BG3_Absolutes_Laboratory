@@ -207,23 +207,30 @@ Progressions are evaluated independently from one another to allow for progressi
 
 		if progressionConditionalGroup.spellListDependencies then
 			for i, spellListId in TableUtils:OrderedPairs(progressionConditionalGroup.spellListDependencies, function(key, value)
-				return MutationConfigurationProxy.spellLists[value].name
+				return MutationConfigurationProxy.spellLists[value] and MutationConfigurationProxy.spellLists[value].name or value
 			end) do
-				local delete = Styler:ImageButton(conditionalCell:AddImageButton("delete" .. spellListId, "ico_red_x", { 16, 16 }))
-				delete.OnClick = function()
-					for x = i, TableUtils:CountElements(progressionConditionalGroup.spellListDependencies) do
-						progressionConditionalGroup.spellListDependencies[x] = progressionConditionalGroup.spellListDependencies[x + 1]
+				local spellList = MutationConfigurationProxy.spellLists[spellListId]
+				if spellList then
+					local delete = Styler:ImageButton(conditionalCell:AddImageButton("delete" .. spellListId, "ico_red_x", { 16, 16 }))
+					delete.OnClick = function()
+						for x = i, TableUtils:CountElements(progressionConditionalGroup.spellListDependencies) do
+							progressionConditionalGroup.spellListDependencies[x] = progressionConditionalGroup.spellListDependencies[x + 1]
+						end
+
+						self:renderMutator(parent, mutator)
 					end
 
+					local spellListLink = conditionalCell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (%s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
+					spellListLink.IDContext = spellListId
+					spellListLink.SameLine = true
+					spellListLink.OnClick = function()
+						SpellListDesigner:launch(spellListId)
+					end
+				else
+					progressionConditionalGroup.spellListDependencies[i] = nil
+					TableUtils:ReindexNumericTable(progressionConditionalGroup.spellListDependencies)
 					self:renderMutator(parent, mutator)
-				end
-
-				local spellList = MutationConfigurationProxy.spellLists[spellListId]
-				local spellListLink = conditionalCell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (%s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
-				spellListLink.IDContext = spellListId
-				spellListLink.SameLine = true
-				spellListLink.OnClick = function()
-					SpellListDesigner:launch(spellListId)
+					return
 				end
 			end
 		end

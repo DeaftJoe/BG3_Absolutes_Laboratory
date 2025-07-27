@@ -71,10 +71,17 @@ function StatusListMutator:renderMutator(parent, mutator)
 	These lists are automatically added from the defined dependencies in the Status List Designer - an entity must have been assigned at least one of these to be assigned this list,
 and this list will use the sum of the assigned spell list levels to determine what levels from this status list should be used.]])
 
-				for _, spellListId in ipairs(list.spellListDependencies) do
+				for s, spellListId in ipairs(list.spellListDependencies) do
 					local spellList = MutationConfigurationProxy.spellLists[spellListId]
-					sep:AddTextLink(spellList.name .. (spellList.modId and string.format(" (from %s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or "")).OnClick = function()
-						SpellListDesigner:launch(spellListId)
+					if spellList then
+						sep:AddTextLink(spellList.name .. (spellList.modId and string.format(" (from %s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or "")).OnClick = function()
+							SpellListDesigner:launch(spellListId)
+						end
+					else
+						list.spellListDependencies[s] = nil
+						TableUtils:ReindexNumericTable(list.spellListDependencies)
+						self:renderMutator(parent, mutator)
+						return
 					end
 				end
 			end
