@@ -60,6 +60,7 @@ based on this list, if specified - if multiple Spell Lists are assigned, it will
 			row:AddCell():AddText(prop .. ": ")
 
 			local input = row:AddCell():AddCombo("##" .. prop)
+			input.Disabled = self.activeList.modId ~= nil
 			input.WidthFitPreview = true
 			input.SameLine = true
 			input.Options, input.SelectedIndex  = buildAbilityOptions(abilityCategory)
