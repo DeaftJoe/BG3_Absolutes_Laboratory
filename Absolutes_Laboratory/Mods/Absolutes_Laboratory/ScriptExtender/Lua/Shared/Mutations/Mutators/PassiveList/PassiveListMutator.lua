@@ -56,7 +56,7 @@ function PassiveListMutator:renderMutator(parent, mutator)
 					mutator.values.passiveLists[x] = nil
 					mutator.values.passiveLists[x] = TableUtils:DeeplyCopyTable(mutator.values.passiveLists._real[x + 1])
 				end
-				self:renderMutator(mutatorSection, mutator)
+				self:renderMutator(parent, mutator)
 			end
 
 			local link = mutatorSection:AddTextLink(list.name .. (list.modId and string.format(" (from %s)", Ext.Mod.GetMod(list.modId).Info.Name) or ""))
@@ -86,10 +86,18 @@ and this list will use the sum of the assigned spell list levels to determine wh
 		popup:Open()
 
 		for passiveListId, passiveList in pairs(MutationConfigurationProxy.passiveLists) do
-			popup:AddSelectable(passiveList.name .. (passiveList.modId and string.format(" (from %s)", Ext.Mod.GetMod(passiveList.modId).Info.Name) or ""), "DontClosePopups").OnClick = function()
-				mutator.values.passiveLists = mutator.values.passiveLists or {}
-				mutator.values.passiveLists[#mutator.values.passiveLists + 1] = passiveListId
-
+			---@type ExtuiSelectable
+			local select = popup:AddSelectable(passiveList.name .. (passiveList.modId and string.format(" (from %s)", Ext.Mod.GetMod(passiveList.modId).Info.Name) or ""),
+				"DontClosePopups")
+			select.Selected = TableUtils:IndexOf(mutator.values.passiveLists, passiveListId) ~= nil
+			select.OnClick = function()
+				if not select.Selected then
+					mutator.values.passiveLists[TableUtils:IndexOf(mutator.values.passiveLists, passiveListId)] = nil
+					TableUtils:ReindexNumericTable(mutator.values.passiveLists)
+				else
+					mutator.values.passiveLists = mutator.values.passiveLists or {}
+					mutator.values.passiveLists[#mutator.values.passiveLists + 1] = passiveListId
+				end
 				self:renderMutator(parent, mutator)
 			end
 		end
@@ -105,7 +113,6 @@ and this list will use the sum of the assigned spell list levels to determine wh
 		if mutator.values.passives and mutator.values.passives() then
 			for i, passiveId in ipairs(mutator.values.passives) do
 				local delete = Styler:ImageButton(passiveGroup:AddImageButton("delete" .. passiveId, "ico_red_x", { 16, 16 }))
-				delete.SameLine = (i - 1) % 3 ~= 0
 				delete.OnClick = function()
 					for x = i, TableUtils:CountElements(mutator.values.passives) do
 						mutator.values.passives[x] = nil
