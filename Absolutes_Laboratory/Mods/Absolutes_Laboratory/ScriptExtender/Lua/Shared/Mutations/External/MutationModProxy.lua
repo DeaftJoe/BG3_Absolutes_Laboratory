@@ -177,6 +177,20 @@ function MutationModProxy:ImportMutationsFromMods()
 						modEntry.spellLists[spellListId] = spellList.name
 					end
 				end
+
+				if mutations.statusLists and next(mutations.statusLists) then
+					modEntry.statusLists = {}
+					for statusListId, statusList in pairs(mutations.statusLists) do
+						modEntry.statusLists[statusListId] = statusList.name
+					end
+				end
+
+				if mutations.passiveLists and next(mutations.passiveLists) then
+					modEntry.passiveLists = {}
+					for passiveListId, passiveList in pairs(mutations.passiveLists) do
+						modEntry.passiveLists[passiveListId] = passiveList.name
+					end
+				end
 			end
 		end
 	end
