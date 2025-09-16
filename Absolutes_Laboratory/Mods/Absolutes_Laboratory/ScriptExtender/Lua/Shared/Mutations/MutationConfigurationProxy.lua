@@ -21,6 +21,29 @@ MutationConfigurationProxy = {
 			return mutationsConfig.folders[k] or MutationModProxy.ModProxy.folders[k]
 		end
 	}),
+	prepPhaseMarkers = setmetatable({}, {
+		__index = function(t, k)
+			return mutationsConfig.prepPhaseMarkers[k] or MutationModProxy.ModProxy.prepPhaseMarkers[k]
+		end,
+		__pairs = function(t)
+			---@type {[Guid]: PrepMarkerCategory}
+			local markerCategories = TableUtils:DeeplyCopyTable(mutationsConfig.prepPhaseMarkers._real)
+
+			for _, modCache in pairs(MutationModProxy.ModProxy.prepPhaseMarkers) do
+				---@cast modCache +LocalModCache
+
+				if modCache.prepPhaseMarkers and next(modCache.prepPhaseMarkers) then
+					for markerId in pairs(modCache.prepPhaseMarkers) do
+						markerCategories[markerId] = MutationModProxy.ModProxy.prepPhaseMarkers[markerId]
+					end
+				end
+			end
+
+			return TableUtils:OrderedPairs(markerCategories, function(key, value)
+				return (value.modId or "_") .. value.name
+			end)
+		end
+	}),
 	spellLists = setmetatable({}, {
 		__index = function(t, k)
 			return mutationsConfig.spellLists[k] or MutationModProxy.ModProxy.spellLists[k]
@@ -30,7 +53,7 @@ MutationConfigurationProxy = {
 			local spellLists = TableUtils:DeeplyCopyTable(mutationsConfig.spellLists._real)
 
 			for _, modCache in pairs(MutationModProxy.ModProxy.spellLists) do
-				---@cast modCache LocalModCache
+				---@cast modCache +LocalModCache
 
 				if modCache.spellLists and next(modCache.spellLists) then
 					for spellListId in pairs(modCache.spellLists) do
@@ -53,7 +76,7 @@ MutationConfigurationProxy = {
 			local passiveLists = TableUtils:DeeplyCopyTable(mutationsConfig.passiveLists._real)
 
 			for _, modCache in pairs(MutationModProxy.ModProxy.passiveLists) do
-				---@cast modCache LocalModCache
+				---@cast modCache +LocalModCache
 
 				if modCache.passiveLists and next(modCache.passiveLists) then
 					for passiveListId in pairs(modCache.passiveLists) do
@@ -76,7 +99,7 @@ MutationConfigurationProxy = {
 			local statusLists = TableUtils:DeeplyCopyTable(mutationsConfig.statusLists._real)
 
 			for _, modCache in pairs(MutationModProxy.ModProxy.statusLists) do
-				---@cast modCache LocalModCache
+				---@cast modCache +LocalModCache
 
 				if modCache.statusLists and next(modCache.statusLists) then
 					for statusListId in pairs(modCache.statusLists) do

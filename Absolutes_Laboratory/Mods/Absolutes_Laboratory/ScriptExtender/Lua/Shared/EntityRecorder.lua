@@ -9,6 +9,7 @@ EntityRecorder.recorderFilename = "recordedEntities.json"
 EntityRecorder.trackerFilename = "recorderTracker.json"
 
 -- Thanks Aahz
+---@enum GameLevel
 EntityRecorder.Levels = {
 	[1] = "TUT_Avernus_C", -- nautiloid
 	[2] = "WLD_Main_A", -- beach, grove, goblin camp, underdark
@@ -31,19 +32,20 @@ EntityRecorder.Levels = {
 }
 
 ---@class EntityRecord
----@field Name string
----@field LevelName string
----@field Id Guid
----@field Template GUIDSTRING
----@field Race RaceUUID
----@field Faction Faction
----@field Progressions ProgressionTableId[]
----@field Tags TAG[]
----@field Stat string
 ---@field Abilities {[string]: number}
+---@field Faction Faction
 ---@field Icon string
----@field XPReward Guid
+---@field Id Guid
+---@field LevelName string
+---@field Name string
+---@field Size number
 ---@field Passives string[]
+---@field Progressions ProgressionTableId[]
+---@field Race RaceUUID
+---@field Stat string
+---@field Tags TAG[]
+---@field Template GUIDSTRING
+---@field XPReward Guid
 
 if Ext.IsClient() then
 	---@type {[GUIDSTRING]: EntityRecord}
@@ -284,6 +286,7 @@ else
 									entityRecord.LevelName = charLevel
 									entityRecord.Id = entity.Uuid.EntityUuid
 									entityRecord.Icon = entity.Icon.Icon
+									entityRecord.Size = entity.ObjectSize and entity.ObjectSize.Size
 									entityRecord.Race = entity.Race.Race
 									entityRecord.Faction = entity.Faction.field_8
 									entityRecord.Stat = entity.Data.StatsId

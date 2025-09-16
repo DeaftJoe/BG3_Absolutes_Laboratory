@@ -38,8 +38,10 @@ function MutatorInterface:renderMutator(parent, mutator) end
 ---@param modifiers {[string]: MutationModifier}
 function MutatorInterface:renderModifiers(parent, modifiers) end
 
+---@param mutator Mutator
+---@param existingMutator Mutator?
 ---@return boolean
-function MutatorInterface:canBeAdditive()
+function MutatorInterface:canBeAdditive(mutator, existingMutator)
 	return false
 end
 
@@ -162,6 +164,8 @@ end
 --- Should fire things like replication, system calls, etc in case an undo and apply need to run consecutively, so they don't fight one another
 ---@param entity EntityHandle
 function MutatorInterface:FinalizeMutator(entity) end
+
+Ext.Require("Shared/Mutations/Mutators/PrepPhaseMarkerMutator.lua")
 
 Ext.Require("Shared/Mutations/Mutators/LevelMutator.lua")
 Ext.Require("Shared/Mutations/Mutators/SpellList/SpellListMutator.lua")

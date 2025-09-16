@@ -18,10 +18,12 @@ end
 
 ---@class StatusListMutator : Mutator
 ---@field values StatusPool
+---@field useGameLevel boolean
 
 ---@param mutator StatusListMutator
 function StatusListMutator:renderMutator(parent, mutator)
 	mutator.values = mutator.values or {}
+	mutator.useGameLevel = mutator.useGameLevel or false
 	Helpers:KillChildren(parent)
 
 	local popup = parent:AddPopup("")
@@ -31,6 +33,21 @@ function StatusListMutator:renderMutator(parent, mutator)
 	statusListDesignerButton.OnClick = function()
 		StatusListDesigner:launch()
 	end
+
+	parent:AddText("(?) Distribute By: "):Tooltip():AddText([[
+	Changing this option will clear all groups and only allow selecting lists that have the same option set, as the two options are not compatible with each other.
+Using game level will distribute all entries in the same level that the entity is in and all the ones that come before (i.e. TUT, WLD, CRE, SCL if they're in SCL).
+Using entity level will use the entity's character level, after Character Level Mutators if applicable.]])
+	Styler:DualToggleButton(parent, "Entity Level", "Game Level", true, function(swap)
+		if swap then
+			mutator.useGameLevel = not mutator.useGameLevel
+			mutator.values.delete = true
+			mutator.values = {}
+			self:renderMutator(parent, mutator)
+		end
+		return not mutator.useGameLevel
+	end)
+
 	local sectionTable = parent:AddTable("Sections", 2)
 	sectionTable.BordersOuter = true
 	local sectionsRow = sectionTable:AddRow()
@@ -92,19 +109,72 @@ and this list will use the sum of the assigned spell list levels to determine wh
 		popup:Open()
 
 		for statusListId, statusList in pairs(MutationConfigurationProxy.statusLists) do
-			---@type ExtuiSelectable
-			local select = popup:AddSelectable(statusList.name .. (statusList.modId and string.format(" (from %s)", Ext.Mod.GetMod(statusList.modId).Info.Name) or ""),
-				"DontClosePopups")
-			select.Selected = TableUtils:IndexOf(mutator.values.statusLists, statusListId) ~= nil
-			select.OnClick = function()
-				if not select.Selected then
-					mutator.values.statusLists[TableUtils:IndexOf(mutator.values.statusLists, statusListId)] = nil
-					TableUtils:ReindexNumericTable(mutator.values.statusLists)
-				else
-					mutator.values.statusLists = mutator.values.statusLists or {}
-					mutator.values.statusLists[#mutator.values.statusLists + 1] = statusListId
+			if statusList.useGameLevel == mutator.useGameLevel then
+				---@type ExtuiSelectable
+				local select = popup:AddSelectable(statusList.name .. (statusList.modId and string.format(" (from %s)", Ext.Mod.GetMod(statusList.modId).Info.Name) or ""),
+					"DontClosePopups")
+				select.Selected = TableUtils:IndexOf(mutator.values.statusLists, statusListId) ~= nil
+				select.OnClick = function()
+					if not select.Selected then
+						mutator.values.statusLists[TableUtils:IndexOf(mutator.values.statusLists, statusListId)] = nil
+						TableUtils:ReindexNumericTable(mutator.values.statusLists)
+					else
+						mutator.values.statusLists = mutator.values.statusLists or {}
+						mutator.values.statusLists[#mutator.values.statusLists + 1] = statusListId
+					end
+					self:renderMutator(parent, mutator)
 				end
-				self:renderMutator(parent, mutator)
+			end
+		end
+
+		if MutationModProxy.ModProxy.statusLists() then
+			---@type {[Guid]: Guid[]}
+			local modStatusLists = {}
+
+			for modId, modCache in pairs(MutationModProxy.ModProxy.statusLists) do
+				---@cast modCache +LocalModCache
+
+				if modCache.statusLists and next(modCache.statusLists) then
+					modStatusLists[modId] = {}
+					for passiveListId in pairs(modCache.statusLists) do
+						table.insert(modStatusLists[modId], passiveListId)
+					end
+				end
+			end
+
+			if next(modStatusLists) then
+				for modId, statusLists in TableUtils:OrderedPairs(modStatusLists, function(key, value)
+					return Ext.Mod.GetMod(key).Info.Name
+				end) do
+					local modGroup = popup:AddGroup("Mods" .. modId)
+
+					modGroup:AddSeparatorText(Ext.Mod.GetMod(modId).Info.Name).Font = "Small"
+
+					for _, statusListId in TableUtils:OrderedPairs(statusLists, function(key, value)
+						return MutationModProxy.ModProxy.passiveLists[value].name
+					end) do
+						local passiveList = MutationModProxy.ModProxy.spellLists[statusListId]
+						if mutator.useGameLevel == passiveList.useGameLevel then
+							---@type ExtuiSelectable
+							local select = modGroup:AddSelectable(passiveList.name, "DontClosePopups")
+							select.Selected = TableUtils:IndexOf(mutator.values.statusLists, statusListId) ~= nil
+							select.OnClick = function()
+								local index = TableUtils:IndexOf(mutator.values.statusLists, statusListId)
+								if index then
+									mutator.values.statusLists[index] = nil
+									select.Selected = false
+								else
+									select.Selected = true
+									table.insert(mutator.values.statusLists, statusListId)
+								end
+								self:renderMutator(parent, mutator)
+							end
+						end
+					end
+					if #modGroup.Children == 1 then
+						modGroup:Destroy()
+					end
+				end
 			end
 		end
 	end
@@ -177,6 +247,8 @@ end
 function StatusListMutator:renderRandomizedAmountSettings(parent, statusPool)
 	Helpers:KillChildren(parent)
 
+	local savedPresetSpreads = ConfigurationStructure.config.mutations.settings.customLists.savedSpellListSpreads.statusLists
+
 	local popup = parent:AddPopup("Randomized")
 
 	--#region Randomized Spell Pool Size
@@ -185,7 +257,9 @@ function StatusListMutator:renderRandomizedAmountSettings(parent, statusPool)
 	statusPool.randomizedStatusPoolSize = statusPool.randomizedStatusPoolSize or {}
 	local randomizedStatusPoolSize = statusPool.randomizedStatusPoolSize
 	if getmetatable(randomizedStatusPoolSize) and getmetatable(randomizedStatusPoolSize).__call and not randomizedStatusPoolSize() then
-		randomizedStatusPoolSize[1] = 1
+		statusPool.randomizedStatusPoolSize.delete = true
+		statusPool.randomizedStatusPoolSize = TableUtils:DeeplyCopyTable(savedPresetSpreads["Default"]._real)
+		randomizedStatusPoolSize = statusPool.randomizedStatusPoolSize
 	end
 
 	local randoSpellsTable = parent:AddTable("RandomSpellNumbers", 3)
@@ -253,6 +327,60 @@ This will cause Lab to give the entity 3 random statuses from the selected Statu
 			end
 		end
 	end
+
+	local loadButton = parent:AddButton("L")
+	loadButton:Tooltip():AddText("\t Load a saved preset")
+	loadButton.SameLine = true
+	loadButton.OnClick = function()
+		Helpers:KillChildren(popup)
+		popup:Open()
+
+		for presetName, spread in TableUtils:OrderedPairs(savedPresetSpreads) do
+			if presetName ~= "Default" then
+				local delete = Styler:ImageButton(popup:AddImageButton("delete" .. presetName, "ico_red_x", { 16, 16 }))
+				delete.OnClick = function()
+					savedPresetSpreads[presetName].delete = true
+					loadButton:OnClick()
+				end
+			end
+			local loadPreset = popup:AddSelectable(presetName)
+			loadPreset.SameLine = presetName ~= "Default"
+			loadPreset.OnClick = function()
+				statusPool.randomizedStatusPoolSize.delete = true
+				statusPool.randomizedStatusPoolSize = TableUtils:DeeplyCopyTable(spread._real)
+				self:renderRandomizedAmountSettings(parent, statusPool)
+			end
+		end
+	end
+
+	local saveButton = parent:AddButton("S")
+	saveButton:Tooltip():AddText("\t Save the current table to a new or existing preset")
+	saveButton.SameLine = true
+	saveButton.OnClick = function()
+		Helpers:KillChildren(popup)
+		popup:Open()
+
+		local nameInput = popup:AddInputText("")
+		nameInput.Hint = "New or Existing Preset Name"
+
+		local overrideConfirmation = popup:AddText("Are you sure you want to override %s?")
+		overrideConfirmation.Visible = false
+		overrideConfirmation:SetColor("Text", { 1, 0.2, 0, 1 })
+
+		local submitButton = popup:AddButton("Save")
+		submitButton.OnClick = function()
+			if overrideConfirmation.Visible or not savedPresetSpreads[nameInput.Text] then
+				if savedPresetSpreads[nameInput.Text] then
+					savedPresetSpreads[nameInput.Text].delete = true
+				end
+				savedPresetSpreads[nameInput.Text] = TableUtils:DeeplyCopyTable(randomizedStatusPoolSize._real)
+				self:renderRandomizedAmountSettings(parent, statusPool)
+			else
+				overrideConfirmation.Label = string.format("Are you sure you want to override %s?", nameInput.Text)
+				overrideConfirmation.Visible = true
+			end
+		end
+	end
 end
 
 ---@param mutator StatusListMutator
@@ -304,10 +432,12 @@ function StatusListMutator:handleDependencies(export, mutator, removeMissingDepe
 end
 
 function StatusListMutator:undoMutator(entity, mutator, primedEntityVar, reprocessTransient)
-	for _, statusId in pairs(mutator.originalValues[self.name]) do
-		if Osi.HasActiveStatus(entity.Uuid.EntityUuid, statusId) == 1 then
-			Logger:BasicDebug("Removing status %s as it was given by Lab", statusId)
-			Osi.RemoveStatus(entity.Uuid.EntityUuid, statusId)
+	if mutator.originalValues[self.name] then
+		for _, statusId in pairs(mutator.originalValues[self.name]) do
+			if Osi.HasActiveStatus(entity.Uuid.EntityUuid, statusId) == 1 then
+				Logger:BasicDebug("Removing status %s as it was given by Lab", statusId)
+				Osi.RemoveStatus(entity.Uuid.EntityUuid, statusId)
+			end
 		end
 	end
 end
@@ -318,7 +448,9 @@ end
 ---@param numRandomStatusesPerLevel number[]
 ---@param appliedStatuses string[]
 local function applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses)
-	Logger:BasicDebug("Applying levels 1 to %s of list %s", levelToUse,
+	Logger:BasicDebug("Applying levels %s to %s of list %s",
+		statusList.useGameLevel and EntityRecorder.Levels[1] or 1,
+		statusList.useGameLevel and EntityRecorder.Levels[levelToUse] or levelToUse,
 		statusList.name .. (statusList.modId and (" from mod " .. Ext.Mod.GetMod(statusList.modId).Info.Name) or ""))
 
 	for level = 1, levelToUse do
@@ -366,7 +498,9 @@ local function applyStatusLists(entity, levelToUse, statusList, numRandomStatuse
 		end
 
 		if numRandomStatusesToPick > 0 then
-			Logger:BasicDebug("Giving %s random statuses out of %s from level %s", numRandomStatusesToPick, #randomPool, level)
+			Logger:BasicDebug("Giving %s random statuses out of %s from level %s", numRandomStatusesToPick, #randomPool,
+				statusList.useGameLevel and EntityRecorder.Levels[level] or level)
+
 			local statusesToGive = {}
 			if #randomPool <= numRandomStatusesToPick then
 				statusesToGive = randomPool
@@ -384,7 +518,7 @@ local function applyStatusLists(entity, levelToUse, statusList, numRandomStatuse
 				Logger:BasicDebug("Added status %s", statusId)
 			end
 		else
-			Logger:BasicDebug("Skipping level %s for random status assignment due to configured size being 0", level)
+			Logger:BasicDebug("Skipping level %s for random status assignment due to configured size being 0", statusList.useGameLevel and EntityRecorder.Levels[level] or level)
 		end
 	end
 end
@@ -468,7 +602,7 @@ function StatusListMutator:applyMutator(entity, entityVar)
 						TableUtils:CountElements(statusListsPool),
 						statusList.name .. (statusList.modId and (" from mod " .. Ext.Mod.GetMod(statusList.modId).Info.Name) or ""))
 
-					local levelToUse = entity.EocLevel.Level
+					local levelToUse = statusList.useGameLevel and EntityRecorder.Levels[entity.Level.LevelName] or entity.EocLevel.Level
 					applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses)
 					break
 				end
