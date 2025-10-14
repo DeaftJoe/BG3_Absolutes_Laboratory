@@ -1,5 +1,8 @@
 LevelMutator = MutatorInterface:new("Character Level")
-
+LevelMutator.affectedComponents = {
+	"Health",
+	"EocLevel"
+}
 function LevelMutator:priority()
 	return self:recordPriority(1)
 end
@@ -65,7 +68,7 @@ function LevelMutator:renderMutator(parent, mutator)
 		end
 	end
 
-	Styler:EnableToggleButton(parent, "relative to the highest-leveled player", true, function(swap)
+	Styler:EnableToggleButton(parent, "relative to the highest-leveled player", true, nil, function(swap)
 		if swap then
 			mutator.levelThreshold.relativeToPlayer = not mutator.levelThreshold.relativeToPlayer
 			if not mutator.levelThreshold.relativeToPlayer and mutator.levelThreshold.level < 1 then
@@ -276,13 +279,13 @@ function LevelMutator:applyMutator(entity, entityVar)
 			---@type EntityHandle
 			local playerEntity = Ext.Entity.Get(player)
 
-			if playerEntity.AvailableLevel.Level > targetLevel then
-				targetLevel = playerEntity.AvailableLevel.Level
+			if playerEntity.EocLevel.Level > targetLevel then
+				targetLevel = playerEntity.EocLevel.Level
 			end
 		end
 		return targetLevel
 	end
-	entityVar.originalValues[self.name] = entity.AvailableLevel.Level
+	entityVar.originalValues[self.name] = entity.EocLevel.Level
 
 	---@type LevelMutator
 	local mutator = entityVar.appliedMutators[self.name]
@@ -362,15 +365,13 @@ function LevelMutator:applyMutator(entity, entityVar)
 
 	if not levelUpSubscription and mutator.usePlayerLevel then
 		---@diagnostic disable-next-line: param-type-mismatch
-		levelUpSubscription = Ext.Entity.OnChange("AvailableLevel", function()
+		levelUpSubscription = Ext.Entity.OnChange("EocLevel", function()
 			Logger:BasicInfo("A levelup mutator is registered and a player just gained enough XP to level up - rerunning mutations")
 			MutationProfileExecutor:ExecuteProfile(true)
 		end, Ext.Entity.Get(Osi.GetHostCharacter()))
 	end
 
-	baseLevel = (Ext.Math.Sign(baseLevel) == -1 and baseLevel < targetLevel) and targetLevel or baseLevel
-
-	entity.AvailableLevel.Level = targetLevel + baseLevel
+	entity.AvailableLevel.Level = math.max(1, targetLevel + baseLevel)
 	entity.EocLevel.Level = entity.AvailableLevel.Level
 	Logger:BasicDebug("Changed level from %s to %s", entityVar.originalValues[self.name], entity.AvailableLevel.Level)
 end
@@ -378,4 +379,119 @@ end
 function LevelMutator:FinalizeMutator(entity)
 	entity:Replicate("AvailableLevel")
 	entity:Replicate("EocLevel")
+end
+
+---@return MazzleDocsDocumentation
+function LevelMutator:generateDocs()
+	return {
+		{
+			Topic = self.Topic,
+			SubTopic = self.SubTopic,
+			content = {
+				{
+					type = "Heading",
+					text = "Character Level",
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "CallOut",
+					prefix = "",
+					prefix_color = "Yellow",
+					text = [[
+Dependency On: None
+Transient: No
+Composable: No]]
+				} --[[@as MazzleDocsCallOut]],
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Summary"
+				},
+				{
+					type = "Content",
+					text = [[
+This mutator serves as an important dependency for almost every other mutator - it allows creating both a living world that grows alongside the player and a tailored one that provides a specific experience, separately or at the same time.
+
+The 'Entity' mentioned throughout refers strictly to the Entity being mutated - the player's level is only relevant where specifically called out.]]
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Client-Side Content"
+				},
+				{
+					type = "Content",
+					text = [[
+The mutator is laid out as follows:
+
+Level Threshold - this represents a condition on the Mutator, separate from the selector, allowing you to design a Mutation that changes the bell curve of the selected entity's levels to match your intended experience.
+
+Base Level - this is the non-random value to set the entity to, which becomes the new 'base' and is referenced in the rest of the Mutator.
+If this is configured to be relative to the highest-leveled player (separate from the threshold), it's considered 'Dynamic', otherwise it's 'Static'
+
+The rest of the Mutator UI is explained via tooltips to avoid duplicated info and inevitable deprecation of information.]]
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Server-Side Implementation"
+				},
+				{
+					type = "Content",
+					text = [[
+This Mutator directly changes the AvailableLevel and EocLevel components on the Entity (somehow this is not transient behavior)
+
+If the Base level is calculated relative to the Players's level (threshold is not relevant here), then a Component listener will be set on the host of the party - when the host levels up and exits the Character Level Up screen, the Profile will completely re-executed as if the game had been saved and reloaded (which does mean that entities that previously didn't meet the threshold could meet it now)]]
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Example Use Cases"
+				},
+				{
+					type = "Section",
+					text = "Selected entities:"
+				},
+				{
+					type = "Bullet",
+					text = {
+						"5 levels or more below the player should become between -2 and +1 levels of the player instead",
+						"less than level 3 should be become between 0 and +3 levels above level 5",
+						"should be 4 levels above their current level",
+						"should be 2 levels lower than the player, but Minibosses should be -1/+2 levels and Bosses should be +3/+5."
+					}
+				} --[[@as MazzleDoctsBullet]],
+			}
+		}
+	} --[[@as MazzleDocsDocumentation]]
+end
+
+---@return {[string]: MazzleDocsContentItem}
+function LevelMutator:generateChangelog()
+	return {
+		["1.7.0"] = {
+			type = "Bullet",
+			text = {
+				"Changes the on level up behavior to trigger when the EocLevel component changes instead of the AvailableLevel component, preventing it from firing mid-combat",
+				"Use EocLevel for all player-centric calculations"
+			}
+		} --[[@as MazzleDocsContentItem]],
+		["1.6.0"] = {
+			type = "Bullet",
+			text = {
+				"Adds Level Thresholds",
+				"Adds option to base the static increase/decrease on the entity's level, not the player's level"
+			}
+		} --[[@as MazzleDocsContentItem]]
+	}
 end

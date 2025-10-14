@@ -3,6 +3,11 @@ Ext.Require("Shared/Mutations/Mutators/StatusList/StatusListDesigner.lua")
 ---@class StatusListMutatorClass : MutatorInterface
 StatusListMutator = MutatorInterface:new("StatusList")
 
+---@type ExtComponentType[]
+StatusListMutator.affectedComponents = {
+	"StatusContainer"
+}
+
 function StatusListMutator:priority()
 	return self:recordPriority(SpellListMutator:priority() + 1)
 end
@@ -61,10 +66,10 @@ Using entity level will use the entity's character level, after Character Level 
 
 	if mutator.values.statusLists then
 		for l, statusListId in TableUtils:OrderedPairs(mutator.values.statusLists, function(key, value)
-			local list = MutationConfigurationProxy.statusLists[value]
+			local list = MutationConfigurationProxy.lists.statusLists[value]
 			return (list.modId or "_") .. list.name
 		end) do
-			local list = MutationConfigurationProxy.statusLists[statusListId]
+			local list = MutationConfigurationProxy.lists.statusLists[statusListId]
 
 			local delete = Styler:ImageButton(mutatorSection:AddImageButton("delete" .. list.name, "ico_red_x", { 16, 16 }))
 			delete.OnClick = function()
@@ -89,7 +94,7 @@ Using entity level will use the entity's character level, after Character Level 
 and this list will use the sum of the assigned spell list levels to determine what levels from this status list should be used.]])
 
 				for s, spellListId in ipairs(list.spellListDependencies) do
-					local spellList = MutationConfigurationProxy.spellLists[spellListId]
+					local spellList = MutationConfigurationProxy.lists.spellLists[spellListId]
 					if spellList then
 						sep:AddTextLink(spellList.name .. (spellList.modId and string.format(" (from %s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or "")).OnClick = function()
 							SpellListDesigner:launch(spellListId)
@@ -108,7 +113,7 @@ and this list will use the sum of the assigned spell list levels to determine wh
 		Helpers:KillChildren(popup)
 		popup:Open()
 
-		for statusListId, statusList in pairs(MutationConfigurationProxy.statusLists) do
+		for statusListId, statusList in pairs(MutationConfigurationProxy.lists.statusLists) do
 			if statusList.useGameLevel == mutator.useGameLevel then
 				---@type ExtuiSelectable
 				local select = popup:AddSelectable(statusList.name .. (statusList.modId and string.format(" (from %s)", Ext.Mod.GetMod(statusList.modId).Info.Name) or ""),
@@ -127,17 +132,17 @@ and this list will use the sum of the assigned spell list levels to determine wh
 			end
 		end
 
-		if MutationModProxy.ModProxy.statusLists() then
+		if MutationModProxy.ModProxy.lists.statusLists() then
 			---@type {[Guid]: Guid[]}
 			local modStatusLists = {}
 
-			for modId, modCache in pairs(MutationModProxy.ModProxy.statusLists) do
+			for modId, modCache in pairs(MutationModProxy.ModProxy.lists.statusLists) do
 				---@cast modCache +LocalModCache
 
-				if modCache.statusLists and next(modCache.statusLists) then
+				if modCache.lists and modCache.lists.statusLists and next(modCache.lists.statusLists) then
 					modStatusLists[modId] = {}
-					for passiveListId in pairs(modCache.statusLists) do
-						table.insert(modStatusLists[modId], passiveListId)
+					for statusListId in pairs(modCache.lists.statusLists) do
+						table.insert(modStatusLists[modId], statusListId)
 					end
 				end
 			end
@@ -148,15 +153,15 @@ and this list will use the sum of the assigned spell list levels to determine wh
 				end) do
 					local modGroup = popup:AddGroup("Mods" .. modId)
 
-					modGroup:AddSeparatorText(Ext.Mod.GetMod(modId).Info.Name).Font = "Small"
+					Styler:ScaledFont(modGroup:AddSeparatorText(Ext.Mod.GetMod(modId).Info.Name), "Small")
 
 					for _, statusListId in TableUtils:OrderedPairs(statusLists, function(key, value)
-						return MutationModProxy.ModProxy.passiveLists[value].name
+						return MutationModProxy.ModProxy.lists.statusLists[value].name
 					end) do
-						local passiveList = MutationModProxy.ModProxy.spellLists[statusListId]
-						if mutator.useGameLevel == passiveList.useGameLevel then
+						local statusList = MutationModProxy.ModProxy.lists.statusLists[statusListId]
+						if mutator.useGameLevel == statusList.useGameLevel then
 							---@type ExtuiSelectable
-							local select = modGroup:AddSelectable(passiveList.name, "DontClosePopups")
+							local select = modGroup:AddSelectable(statusList.name, "DontClosePopups")
 							select.Selected = TableUtils:IndexOf(mutator.values.statusLists, statusListId) ~= nil
 							select.OnClick = function()
 								local index = TableUtils:IndexOf(mutator.values.statusLists, statusListId)
@@ -398,7 +403,7 @@ function StatusListMutator:handleDependencies(export, mutator, removeMissingDepe
 				if not container.modDependencies[status.OriginalModId] then
 					local name, author, version = Helpers:BuildModFields(status.OriginalModId)
 					if author == "Larian" then
-						return
+						return true
 					end
 
 					container.modDependencies[status.OriginalModId] = {
@@ -427,7 +432,7 @@ function StatusListMutator:handleDependencies(export, mutator, removeMissingDepe
 	end
 
 	if mutator.values.statusLists then
-		StatusListDesigner:HandleDependences(export, mutator, mutator.values.statusLists, removeMissingDependencies)
+		ListConfigurationManager:HandleDependences(export, mutator, mutator.values.statusLists, removeMissingDependencies, StatusListDesigner.configKey)
 	end
 end
 
@@ -447,7 +452,8 @@ end
 ---@param statusList CustomList
 ---@param numRandomStatusesPerLevel number[]
 ---@param appliedStatuses string[]
-local function applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses)
+---@param appliedLists Guid[]
+local function applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses, appliedLists)
 	Logger:BasicDebug("Applying levels %s to %s of list %s",
 		statusList.useGameLevel and EntityRecorder.Levels[1] or 1,
 		statusList.useGameLevel and EntityRecorder.Levels[levelToUse] or levelToUse,
@@ -472,7 +478,6 @@ local function applyStatusLists(entity, levelToUse, statusList, numRandomStatuse
 					for _, statusId in pairs(leveledLists.manuallySelectedEntries.guaranteed) do
 						if Osi.HasActiveStatus(entity.Uuid.EntityUuid, statusId) == 0 then
 							Logger:BasicDebug("Adding guaranteed status %s", statusId)
-							Osi.ApplyStatus(entity.Uuid.EntityUuid, statusId, -1)
 							table.insert(appliedStatuses, statusId)
 						else
 							Logger:BasicDebug("Guaranteed status %s is already present", statusId)
@@ -513,14 +518,31 @@ local function applyStatusLists(entity, levelToUse, statusList, numRandomStatuse
 			end
 
 			for _, statusId in pairs(statusesToGive) do
-				Osi.ApplyStatus(entity.Uuid.EntityUuid, statusId, -1)
 				table.insert(appliedStatuses, statusId)
-				Logger:BasicDebug("Added status %s", statusId)
 			end
 		else
 			Logger:BasicDebug("Skipping level %s for random status assignment due to configured size being 0", statusList.useGameLevel and EntityRecorder.Levels[level] or level)
 		end
 	end
+
+	---@param listToProcess CustomList
+	local function recursivelyApplyLists(listToProcess)
+		if listToProcess.linkedLists and next(listToProcess.linkedLists._real or listToProcess.linkedLists) then
+			for _, linkedListId in pairs(listToProcess.linkedLists) do
+				if not TableUtils:IndexOf(appliedLists, linkedListId) then
+					table.insert(appliedLists, linkedListId)
+
+					local linkedList = MutationConfigurationProxy.lists.statusLists[linkedListId]
+					Logger:BasicDebug("### STARTING List %s, linked from %s ###", linkedList.name, listToProcess.name)
+					applyStatusLists(entity, levelToUse, linkedList, numRandomStatusesPerLevel, appliedStatuses, appliedLists)
+					Logger:BasicDebug("### FINISHED List %s, linked from %s ###", linkedList.name, listToProcess.name)
+
+					recursivelyApplyLists(linkedList)
+				end
+			end
+		end
+	end
+	recursivelyApplyLists(statusList)
 end
 
 function StatusListMutator:applyMutator(entity, entityVar)
@@ -548,7 +570,7 @@ function StatusListMutator:applyMutator(entity, entityVar)
 
 		if statusListMutator.values.statusLists then
 			for _, statusListId in pairs(statusListMutator.values.statusLists) do
-				local statusList = MutationConfigurationProxy.statusLists[statusListId]
+				local statusList = MutationConfigurationProxy.lists.statusLists[statusListId]
 				statusList = statusList.__real or statusList
 				if statusList then
 					if statusList.spellListDependencies and next(statusList.spellListDependencies) then
@@ -580,13 +602,19 @@ function StatusListMutator:applyMutator(entity, entityVar)
 		for _, statusId in pairs(looseStatusesToApply) do
 			if Osi.HasActiveStatus(entity.Uuid.EntityUuid, statusId) == 0 then
 				Logger:BasicDebug("Adding loose status %s", statusId)
-				Osi.ApplyStatus(entity.Uuid.EntityUuid, statusId, -1)
 				table.insert(appliedStatuses, statusId)
 			else
 				Logger:BasicDebug("Loose status %s is already present", statusId)
 			end
 		end
 	end
+
+
+	---@type EntryReplacerDictionary
+	local replaceMap = TableUtils:DeeplyCopyTable(ConfigurationStructure.config.mutations.lists.entryReplacerDictionary)
+	replaceMap.statusLists = replaceMap.statusLists or {}
+
+	local appliedLists = {}
 
 	if next(statusListsPool) then
 		if not usingListsWithSpellListDeps then
@@ -595,7 +623,7 @@ function StatusListMutator:applyMutator(entity, entityVar)
 			for statusListId, numRandomStatusesPerLevel in pairs(statusListsPool) do
 				count = count + 1
 				if count == chosenIndex then
-					local statusList = MutationConfigurationProxy.statusLists[statusListId]
+					local statusList = MutationConfigurationProxy.lists.statusLists[statusListId]
 					statusList = statusList.__real or statusList
 
 					Logger:BasicDebug("%s status lists without dependencies are in the pool - randomly chose %s",
@@ -603,13 +631,33 @@ function StatusListMutator:applyMutator(entity, entityVar)
 						statusList.name .. (statusList.modId and (" from mod " .. Ext.Mod.GetMod(statusList.modId).Info.Name) or ""))
 
 					local levelToUse = statusList.useGameLevel and EntityRecorder.Levels[entity.Level.LevelName] or entity.EocLevel.Level
-					applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses)
+
+					if levelToUse > 0 and statusList.modId then
+						local modReplaceMap = MutationConfigurationProxy.lists.entryReplacerDictionary[statusList.modId]
+						if modReplaceMap.statusLists then
+							for statReplacement, statsToReplace in pairs(modReplaceMap.statusLists) do
+								if not replaceMap.statusLists[statReplacement] then
+									replaceMap.statusLists[statReplacement] = statsToReplace
+								else
+									for _, toReplace in ipairs(statsToReplace) do
+										if not TableUtils:IndexOf(replaceMap.statusLists[statReplacement], toReplace) then
+											table.insert(replaceMap.statusLists[statReplacement])
+										end
+									end
+								end
+							end
+							Logger:BasicDebug("Added Mod %'s replacement map to the overall replacement map, as one of it's lists was used",
+								Ext.Mod.GetMod(statusList.modId).Info.Name)
+						end
+					end
+
+					applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses, appliedLists)
 					break
 				end
 			end
 		else
 			for statusListId, numRandomStatusesPerLevel in pairs(statusListsPool) do
-				local statusList = MutationConfigurationProxy.statusLists[statusListId]
+				local statusList = MutationConfigurationProxy.lists.statusLists[statusListId]
 				statusList = statusList.__real or statusList
 
 				local levelToUse = 0
@@ -620,12 +668,137 @@ function StatusListMutator:applyMutator(entity, entityVar)
 					end
 				end
 
-				applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses)
+				if levelToUse > 0 and statusList.modId then
+					local modReplaceMap = MutationConfigurationProxy.lists.entryReplacerDictionary[statusList.modId]
+					if modReplaceMap.statusLists then
+						for statReplacement, statsToReplace in pairs(modReplaceMap.statusLists) do
+							if not replaceMap.statusLists[statReplacement] then
+								replaceMap.statusLists[statReplacement] = statsToReplace
+							else
+								for _, toReplace in ipairs(statsToReplace) do
+									if not TableUtils:IndexOf(replaceMap.statusLists[statReplacement], toReplace) then
+										table.insert(replaceMap.statusLists[statReplacement])
+									end
+								end
+							end
+						end
+						Logger:BasicDebug("Added Mod %'s replacement map to the overall replacement map, as one of its lists was used",
+							Ext.Mod.GetMod(statusList.modId).Info.Name)
+					end
+				end
+
+				applyStatusLists(entity, levelToUse, statusList, numRandomStatusesPerLevel, appliedStatuses, appliedLists)
 			end
 		end
 	end
 
 	if next(appliedStatuses) then
+		for i = #appliedStatuses, 1, -1 do
+			local statusToApply = appliedStatuses[i]
+			if statusToApply and replaceMap.statusLists[statusToApply] then
+				for _, statusToRemove in pairs(replaceMap.statusLists[statusToApply]) do
+					if Osi.HasActiveStatus(entity.Uuid.EntityUuid, statusToRemove) == 1 then
+						Osi.RemoveStatus(entity.Uuid.EntityUuid, statusToRemove, entity.Uuid.EntityUuid)
+						Logger:BasicDebug("Removed %s from the entity as it's marked to be removed by %s", statusToRemove, statusToApply)
+					end
+					local index = TableUtils:IndexOf(appliedStatuses, statusToRemove)
+					if index then
+						appliedStatuses[index] = nil
+						Logger:BasicDebug("Removed %s from list of statuses to apply as it's marked to be removed by %s", statusToRemove, statusToApply)
+					end
+				end
+			end
+		end
+
+		TableUtils:ReindexNumericTable(appliedStatuses)
+
+		Logger:BasicDebug("Applying the following statuses: %s", appliedStatuses)
+		for _, statusToApply in ipairs(appliedStatuses) do
+			Osi.ApplyStatus(entity.Uuid.EntityUuid, statusToApply, -1, 1)
+		end
+
 		entityVar.originalValues[self.name] = appliedStatuses
 	end
+end
+
+---@return MazzleDocsDocumentation
+function StatusListMutator:generateDocs()
+	return {
+		{
+			Topic = self.Topic,
+			SubTopic = self.SubTopic,
+			content = {
+				{
+					type = "Heading",
+					text = "Status Lists",
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "CallOut",
+					prefix = "",
+					prefix_color = "Yellow",
+					text = [[
+Dependency On: Spell Lists
+Transient: No
+Composable: All groups will be combined into one large pool, which will be pulled from randomly post-filter]]
+				} --[[@as MazzleDocsCallOut]],
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Summary"
+				},
+				{
+					type = "Content",
+					text = [[Basically Spell Lists, just with Statuses!]]
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Client-Side Content"
+				},
+				{
+					type = "Content",
+					text = [[
+The mutator is designed very similarily to Spell Lists again, so only the differences are notated:
+
+- There are no level pools - instead, the mutator checks the combiend levels of the linked Spell Lists that were assigned and uses that to determine what level to use for the given list
+- If there are no Linked Spell lists, the entity level will be used instead
+- There are no criteria due to the Spell List dependency
+- There is no Progression Browser in the Status List Designer, as Progressions don't assign statuses.
+
+The rest of the Mutator UI is explained via tooltips to avoid duplicated info and inevitable deprecation of information.]]
+				},
+				{
+					type = "Separator"
+				},
+				{
+					type = "SubHeading",
+					text = "Server-Side Implementation"
+				},
+				{
+					type = "Content",
+					text = [[Since this mutator only has Random and Guaranteed pools, all statuses are added via Osi: Osi.ApplyStatus(entity.Uuid.EntityUuid, statusToApply, -1, 1)
+This forces the status to apply for an infinite duration - reasoning being that any temporary statuses should be given via a Spell cast configured through a given Spell List. Another mutator will be coming down that road that allows conditional, duration-locked status applications.
+
+Building the random pool follows the same general logic as Spell List Mutator:
+When determining what statuses end up in the Random pool to be added to the entity, checks are done to ensure:
+1. The status isn't already on the entity
+
+Once the final list of statuses are determined, the Replace logic is run, removing any statuses from the final list and the entity's StatusContainer (via Osi.RemoveStatus) if they're marked to be replaced by another status. ]]
+				},
+			}
+		}
+	} --[[@as MazzleDocsDocumentation]]
+end
+
+---@return {[string]: MazzleDocsContentItem}
+function StatusListMutator:generateChangelog()
+	return {
+	} --[[@as {[string]: MazzleDocsContentItem}]]
 end

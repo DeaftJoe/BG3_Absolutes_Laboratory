@@ -9,14 +9,14 @@ local disabledButtonColor = { 0, 0, 0, 0 }
 ---@type ExtuiPopup
 local popup
 
+local lastViewedMutator
+
 ---@param parent ExtuiTreeParent
 ---@param existingMutation Mutation
 function MutationDesigner:RenderMutationManager(parent, existingMutation)
+	lastViewedMutator = nil
 	Helpers:KillChildren(parent)
-	popup = parent:AddPopup("")
-	popup:SetColor("PopupBg", { 0, 0, 0, 1 })
-	popup:SetColor("Border", { 1, 0, 0, 0.5 })
-	popup.AutoClosePopups = true
+	popup = Styler:Popup(parent)
 
 	if existingMutation.modId then
 		Styler:CheapTextAlign("Mod-Added Mutation - You can browse, but not edit", parent, "Large"):SetColor("Text", { 1, 0, 0, 0.45 })
@@ -31,7 +31,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 	local focusButtons
 
 	Styler:MiddleAlignedColumnLayout(parent, function(ele)
-		ele.Font = "Small"
+		Styler:ScaledFont(ele, "Small")
 		Styler:CheapTextAlign("Focus:", ele)
 
 		local focusSelectors = ele:AddButton("Selectors")
@@ -78,8 +78,20 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 
 		if focusButtons[2].UserData or focusButtons[1].UserData then
 			local selectorColumn = row:AddCell()
-			Styler:CheapTextAlign("Selectors", selectorColumn, "Big").UserData = "keep"
+
+			local title = Styler:CheapTextAlign("Selectors", selectorColumn, "Big")
+			title.UserData = "keep"
+			title.AllowOverlap = true
+
+			local docs = MazzleDocs:addDocButton(selectorColumn, SelectorInterface:generateDocs({}), function(config)
+				config.window_title = "Lab: Selectors"
+			end)
+			docs.AllowItemOverlap = true
+			docs.UserData = "keep"
+			docs.PositionOffset = Styler:ScaleFactor({ 0, -50 })
+
 			Styler:MiddleAlignedColumnLayout(selectorColumn, function(ele)
+				-- ele:AddText("Selectors").Font = "Big"
 				local dryRunButton = ele:AddButton("Dry Run")
 				dryRunButton.Disabled = false
 				dryRunButton.UserData = "EnableForMods"
@@ -105,7 +117,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 					for level, entities in pairs(EntityRecorder:GetEntities()) do
 						local header = resultsWindow:AddCollapsingHeader(level)
 						header:SetColor("Header", { 1, 1, 1, 0 })
-						header.Font = "Large"
+						Styler:ScaledFont(header, "Large")
 						header.DefaultOpen = true
 
 						local columnCounter = 0
@@ -120,11 +132,11 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 								local group = header:AddChildWindow(level .. entity)
 								group.Font = "Medium"
 								group.NoSavedSettings = true
-								group.Size = { 100, 100 }
+								group.Size = Styler:ScaleFactor({ 100, 100 })
 								group.SameLine = columnCounter > 1 and columnCounter % maxCols ~= 1
 
 								Styler:MiddleAlignedColumnLayout(group, function(ele)
-									local image = ele:AddImage(record.Icon, { 64, 64 })
+									local image = ele:AddImage(record.Icon, Styler:ScaleFactor({ 64, 64 }))
 									if image.ImageData.Icon == "" then
 										ele:AddImage("Item_Unknown", { 64, 64 })
 									end
@@ -134,7 +146,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 									local hyperlink = Styler:HyperlinkText(ele, record.Name, function(parent)
 										CharacterWindow:BuildWindow(parent, entity)
 									end)
-									hyperlink.Font = "Small"
+									Styler:ScaledFont(hyperlink, "Small")
 								end)
 							end
 						end
@@ -146,7 +158,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 					end
 
 					if resultCounter == 0 then
-						resultsWindow:AddText("No Entities Selected").Font = "Large"
+						Styler:ScaledFont(resultsWindow:AddText("No Entities Selected"), "Large")
 					end
 
 					resultsWindow.Label = string.format("%s - %s Results###resultswindow", "Dry Run", resultCounter)
@@ -160,17 +172,30 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 
 			local mutatorColumn = row:AddCell()
 
-			Styler:CheapTextAlign(("%s"):format(existingMutation.prepPhase and "Prep Mutator" or "Mutators"), mutatorColumn, "Big").UserData = "keep"
+			local title = Styler:CheapTextAlign(("%s"):format(existingMutation.prepPhase and "Prep Mutator" or "Mutators"), mutatorColumn, "Big")
+			title.UserData = "keep"
+			title.AllowOverlap = true
+
+			local docs = MazzleDocs:addDocButton(mutatorColumn, MutatorInterface:generateDocs({}), function(config)
+				config.window_title = "Lab: Mutators"
+			end)
+			docs.PositionOffset = Styler:ScaleFactor({ 0, -50 })
+			docs.AllowItemOverlap = true
+			docs.UserData = "keep"
+
 			Styler:MiddleAlignedColumnLayout(mutatorColumn, function(ele)
-				ele.Font = "Small"
+				Styler:ScaledFont(ele, "Small")
+				-- ele:AddText(("%s"):format(existingMutation.prepPhase and "Prep Mutator" or "Mutators")).Font = "Big"
 
 				if not existingMutation.prepPhase then
+					-- Styler:MiddleAlignedColumnLayout(ele, function(ele)
 					Styler:DualToggleButton(ele, "Sidebar", "Infinite Scroll", false, function(swap)
 						if swap then
 							setting.mutatorStyle = setting.mutatorStyle ~= "Sidebar" and "Sidebar" or "Infinite"
 							buildDesignerFunc()
 						end
 						return setting.mutatorStyle == "Sidebar"
+						-- end)
 					end)
 				else
 					ele:AddNewLine()
@@ -234,8 +259,12 @@ function MutationDesigner:RenderSelectors(parent, existingSelector, prepPhase)
 		local delete = Styler:ImageButton(sideCell:AddImageButton("delete", "ico_red_x", Styler:ScaleFactor({ 16, 16 })))
 		delete.UserData = i
 		delete.OnClick = function()
-			existingSelector[i] = nil
-			existingSelector[i + 1].delete = true
+			selectorEntry.delete = true
+			if andOrEntry == nil then
+				existingSelector[i + 2] = nil
+			else
+				existingSelector[i] = nil
+			end
 
 			TableUtils:ReindexNumericTable(existingSelector)
 
@@ -317,7 +346,6 @@ function MutationDesigner:RenderSelectors(parent, existingSelector, prepPhase)
 			Helpers:KillChildren(selectorGroup)
 			if selectorEntry.criteriaValue then
 				selectorEntry.criteriaValue.delete = true
-				selectorEntry.criteriaValue = nil
 			end
 
 			selectorEntry.criteriaCategory = selectorCombo.Options[selectorCombo.SelectedIndex + 1]
@@ -543,7 +571,7 @@ function MutationDesigner:RenderMutatorsInfiniteScroll(parent, mutators, prepPha
 
 		local mutatorCombo = mutatorCell:AddCombo("")
 		mutatorCombo.Visible = not prepPhase
-		mutatorCombo.Font = "Large"
+		Styler:ScaledFont(mutatorCombo, "Large")
 		mutatorCombo.WidthFitPreview = true
 		local opts = {}
 		local selectedIndex = -1
@@ -629,7 +657,7 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 	for i, mutator in TableUtils:OrderedPairs(mutators, function(key, value)
 		return MutatorInterface.registeredMutators[value.targetProperty]:priority()
 	end) do
-		local delete = Styler:ImageButton(sideBar:AddImageButton("delete" .. mutator.targetProperty, "ico_red_x", { 16, 16 }))
+		local delete = Styler:ImageButton(sideBar:AddImageButton("delete" .. mutator.targetProperty, "ico_red_x", Styler:ScaleFactor({ 16, 16 })))
 		delete.OnClick = function()
 			for x = i, TableUtils:CountElements(mutators) do
 				mutators[x].delete = true
@@ -642,6 +670,7 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 		---@type ExtuiSelectable
 		local select = sideBar:AddSelectable(mutator.targetProperty)
 		select.SameLine = true
+		select.UserData = "EnableForMods"
 		select.OnClick = function()
 			if activeMutatorHandle then
 				activeMutatorHandle.Selected = false
@@ -650,10 +679,12 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 
 			activeMutatorHandle = select
 
+			lastViewedMutator = mutator.targetProperty
+
 			MutatorInterface.registeredMutators[mutator.targetProperty]:renderMutator(designer, mutator)
 		end
 
-		if mutator.targetProperty == activeMutator or (not activeMutator and not activeMutatorHandle) then
+		if mutator.targetProperty == activeMutator or mutator.targetProperty == lastViewedMutator or (not activeMutator and not activeMutatorHandle and not lastViewedMutator) then
 			select.Selected = true
 			select.OnClick()
 		end

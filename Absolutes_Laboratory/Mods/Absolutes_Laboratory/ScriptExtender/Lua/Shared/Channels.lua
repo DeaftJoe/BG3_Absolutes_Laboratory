@@ -1,3 +1,5 @@
+Channels.UpdateConfiguration = Ext.Net.CreateChannel(ModuleUUID, "UpdateConfiguration")
+
 Channels.GetEntityDump = Ext.Net.CreateChannel(ModuleUUID, "GetEntityDump")
 Channels.GetEntityIcon = Ext.Net.CreateChannel(ModuleUUID, "GetEntityIcon")
 Channels.IsEntityAlive = Ext.Net.CreateChannel(ModuleUUID, "IsEntityAlive")
@@ -6,3 +8,6 @@ Channels.TeleportToLevel = Ext.Net.CreateChannel(ModuleUUID, "TeleportToLevel")
 Channels.TeleportToEntity = Ext.Net.CreateChannel(ModuleUUID, "TeleportToEntity")
 Channels.TeleportEntityToHost = Ext.Net.CreateChannel(ModuleUUID, "TeleportEntityToHost")
 Channels.ActivateMutationProfile = Ext.Net.CreateChannel(ModuleUUID, "ActivateMutationProfile")
+
+Channels.ProfileExecutionStatus = Ext.Net.CreateChannel(ModuleUUID, "ProfileExecutionStatus")
+Channels.GenerateMutationDiagram = Ext.Net.CreateChannel(ModuleUUID, "GenerateMutationDiagram")
