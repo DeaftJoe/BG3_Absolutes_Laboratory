@@ -104,6 +104,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 						resultsWindow = Ext.IMGUI.NewWindow("Dry Run Results###resultswindow")
 						resultsWindow.Closeable = true
 						resultsWindow.AlwaysAutoResize = true
+						resultsWindow.Scaling = "Scaled"
 					else
 						resultsWindow.Open = true
 						resultsWindow:SetFocus()
@@ -185,17 +186,14 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 
 			Styler:MiddleAlignedColumnLayout(mutatorColumn, function(ele)
 				Styler:ScaledFont(ele, "Small")
-				-- ele:AddText(("%s"):format(existingMutation.prepPhase and "Prep Mutator" or "Mutators")).Font = "Big"
 
 				if not existingMutation.prepPhase then
-					-- Styler:MiddleAlignedColumnLayout(ele, function(ele)
 					Styler:DualToggleButton(ele, "Sidebar", "Infinite Scroll", false, function(swap)
 						if swap then
 							setting.mutatorStyle = setting.mutatorStyle ~= "Sidebar" and "Sidebar" or "Infinite"
 							buildDesignerFunc()
 						end
 						return setting.mutatorStyle == "Sidebar"
-						-- end)
 					end)
 				else
 					ele:AddNewLine()
