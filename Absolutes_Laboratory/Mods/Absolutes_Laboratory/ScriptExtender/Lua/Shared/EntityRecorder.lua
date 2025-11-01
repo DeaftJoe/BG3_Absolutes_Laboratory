@@ -46,6 +46,7 @@ EntityRecorder.Levels = {
 ---@field Tags TAG[]
 ---@field Template GUIDSTRING
 ---@field XPReward Guid
+---@field CombatGroupId Guid?
 
 ---@param entity EntityHandle
 ---@return string
@@ -276,6 +277,7 @@ else
 								and not TableUtils:IndexOf(recordedLevels, function(value)
 									return value[entity.Uuid.EntityUuid]
 								end)
+								and not entity.Vars.AbsolutesLaboratory_MonsterLab_Entity
 							then
 								local success, error = xpcall(function(...)
 									local recordedEntities = recordedEntities
@@ -294,6 +296,7 @@ else
 
 									entityRecord.LevelName = charLevel
 									entityRecord.Id = entity.Uuid.EntityUuid
+									entityRecord.CombatGroupId = entity.CombatParticipant.CombatGroupId
 									entityRecord.Icon = entity.Icon.Icon
 									entityRecord.Size = entity.ObjectSize and entity.ObjectSize.Size
 									entityRecord.Race = entity.Race.Race

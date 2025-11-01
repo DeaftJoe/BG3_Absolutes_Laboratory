@@ -50,9 +50,7 @@ function ConfigurationStructure:generate_recursive_metatable(proxy_table, real_t
 				this_table._parent_table[this_table._parent_key] = nil
 			else
 				if value == nil then
-					if real_table[key] then
-						real_table[key] = nil
-					end
+					real_table[key] = nil
 				else
 					if type(key) == "string" and tonumber(key) then
 						key = tonumber(key)
@@ -118,6 +116,7 @@ ConfigurationStructure.DynamicClassDefinitions = {}
 ConfigurationStructure.config = Ext.IsClient() and ConfigurationStructure:generate_recursive_metatable({}, real_config_table) or {}
 
 Ext.Require("Shared/Configurations/MutationsConfig.lua")
+Ext.Require("Shared/Configurations/MonsterLabConfig.lua")
 
 local function CopyConfigsIntoReal(table_from_file, proxy_table)
 	for key, value in pairs(table_from_file) do
@@ -193,8 +192,17 @@ function ConfigurationStructure:InitializeConfig()
 		else
 			convertStringKeysToNumeric(config)
 			-- All config management is done on the client side - just want server to always use the full config file (instead of attempting to merge with defaults)
-			real_config_table = config
-			ConfigurationStructure.config = config
+			for key in pairs(real_config_table) do
+				if not config[key] then
+					real_config_table[key] = nil
+					ConfigurationStructure.config[key] = nil
+				end
+			end
+
+			for key, value in pairs(config) do
+				real_config_table[key] = value
+				ConfigurationStructure.config[key] = value
+			end
 		end
 	end
 

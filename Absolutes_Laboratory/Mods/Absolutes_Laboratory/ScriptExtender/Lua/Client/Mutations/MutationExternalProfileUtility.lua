@@ -158,7 +158,7 @@ local dependencyBlock = [[
 ]]
 
 ---@param modList string[]
-local function buildMetaBlock(modList)
+function MutationExternalProfileUtility:buildMetaBlock(modList)
 	if next(modList) then
 		local output = ""
 		for _, modId in TableUtils:CombinedPairs(modList) do
@@ -190,7 +190,7 @@ local function buildMetaBlock(modList)
 end
 
 Ext.RegisterConsoleCommand("Lab_MetaBlock", function(cmd, ...)
-	print(buildMetaBlock({ ... }))
+	print(MutationExternalProfileUtility:buildMetaBlock({ ... }))
 end)
 
 ---@param mutationConfig MutationsConfig
@@ -213,7 +213,7 @@ function MutationExternalProfileUtility:BuildMetaDependencyBlock(mutationConfig,
 		table.insert(extraDependencies, modId)
 	end
 
-	return buildMetaBlock(extraDependencies)
+	return MutationExternalProfileUtility:buildMetaBlock(extraDependencies)
 end
 
 ---@param forMod boolean
@@ -306,10 +306,10 @@ function MutationExternalProfileUtility:exportProfile(forMod, ...)
 
 	if forMod then
 		names = MutationModProxy.Filename
-		FileUtils:SaveStringContentToFile("ExportedProfiles/ExportedModMetaLsxDependencies.lsx", self:BuildMetaDependencyBlock(export, mutationDependencies) or "")
+		FileUtils:SaveStringContentToFile("ExportedProfiles/Mutations/ExportedModMetaLsxDependencies.lsx", self:BuildMetaDependencyBlock(export, mutationDependencies) or "")
 	end
 
-	FileUtils:SaveTableToFile("ExportedProfiles/" .. names .. ".json", {
+	FileUtils:SaveTableToFile("ExportedProfiles/Mutations/" .. names .. ".json", {
 		["mutations"] = export
 	})
 end
@@ -318,7 +318,7 @@ end
 local window
 
 ---@class DependencyFailure
----@field type "Selector"|"Mutator"|"SpellList"|"Folder"
+---@field type "Selector"|"Mutator"|"SpellList"|"Folder"|"Encounter"
 ---@field target string?
 ---@field folderName string?
 ---@field mutationName string?

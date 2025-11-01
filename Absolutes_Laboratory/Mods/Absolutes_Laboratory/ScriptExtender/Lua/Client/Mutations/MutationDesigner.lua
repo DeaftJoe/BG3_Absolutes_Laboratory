@@ -83,9 +83,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 			title.UserData = "keep"
 			title.AllowOverlap = true
 
-			local docs = MazzleDocs:addDocButton(selectorColumn, SelectorInterface:generateDocs({}), function(config)
-				config.window_title = "Lab: Selectors"
-			end)
+			local docs = MazzleDocs:addDocButton(selectorColumn)
 			docs.AllowItemOverlap = true
 			docs.UserData = "keep"
 			docs.PositionOffset = Styler:ScaleFactor({ 0, -50 })
@@ -177,9 +175,7 @@ function MutationDesigner:RenderMutationManager(parent, existingMutation)
 			title.UserData = "keep"
 			title.AllowOverlap = true
 
-			local docs = MazzleDocs:addDocButton(mutatorColumn, MutatorInterface:generateDocs({}), function(config)
-				config.window_title = "Lab: Mutators"
-			end)
+			local docs = MazzleDocs:addDocButton(mutatorColumn)
 			docs.PositionOffset = Styler:ScaleFactor({ 0, -50 })
 			docs.AllowItemOverlap = true
 			docs.UserData = "keep"
@@ -640,8 +636,9 @@ end
 ---@param mutators Mutator[]
 ---@param activeMutator string?
 ---@param prepPhase boolean?
-function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMutator, prepPhase)
+function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMutator, prepPhase, popupToUse)
 	Helpers:KillChildren(parent)
+	popupToUse = popupToUse or popup
 
 	local mutatorTable = Styler:TwoColumnTable(parent, "mutators")
 	mutatorTable.Resizable = false
@@ -662,7 +659,7 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 				mutators[x] = TableUtils:DeeplyCopyTable(mutators._real[x + 1])
 			end
 
-			self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase)
+			self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase, popupToUse)
 		end
 
 		---@type ExtuiSelectable
@@ -691,8 +688,8 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 	if not prepPhase then
 		local addNewEntryButton = sideBar:AddButton("+")
 		addNewEntryButton.OnClick = function()
-			Helpers:KillChildren(popup)
-			popup:Open()
+			Helpers:KillChildren(popupToUse)
+			popupToUse:Open()
 
 			for mutatorName in TableUtils:OrderedPairs(MutatorInterface.registeredMutators) do
 				if not TableUtils:IndexOf(mutators, function(value)
@@ -700,12 +697,12 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 					end)
 					and mutatorName ~= PrepPhaseMarkerMutator.name
 				then
-					popup:AddSelectable(mutatorName).OnClick = function()
+					popupToUse:AddSelectable(mutatorName).OnClick = function()
 						table.insert(mutators, {
 							targetProperty = mutatorName
 						} --[[@as Mutator]])
 
-						self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase)
+						self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase, popupToUse)
 					end
 				end
 			end
@@ -715,7 +712,7 @@ function MutationDesigner:RenderMutatorsSidebarStyle(parent, mutators, activeMut
 		managePresetsButton:Tooltip():AddText("\t Manage Mutator Presets")
 		managePresetsButton.SameLine = true
 		buildManageMutationPreset(managePresetsButton, mutators, function()
-			self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase)
+			self:RenderMutatorsSidebarStyle(parent, mutators, activeMutatorHandle and activeMutatorHandle.Label, prepPhase, popupToUse)
 		end)
 	end
 end

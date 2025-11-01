@@ -1,6 +1,6 @@
 ---@class MutatorEntityVar
 ---@field appliedMutators {[string]: Mutator|Mutator[]}
----@field appliedMutatorsPath {[string]: MutationProfileRule|MutationProfileRule[]}
+---@field appliedMutatorsPath {[string]: (MutationProfileRule|MonsterLab_RulesetRule)|(MutationProfileRule|MonsterLab_RulesetRule)[]}
 ---@field originalValues {[string]: any}
 
 ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME = "Absolutes_Laboratory_Mutations"
@@ -109,7 +109,7 @@ function MutatorInterface:applyMutator(entity, entityVar)
 		end, debug.traceback)
 
 		if not success then
-			Logger:BasicError("Failed to apply mutator %s to %s - %s", mutatorName, entity.Uuid.EntityUuid, error)
+			Logger:BasicError("Failed to apply mutator %s to %s - %s", mutatorName, entityName, error)
 		else
 			self.registeredMutators[mutatorName]:FinalizeMutator(entity)
 
@@ -164,7 +164,7 @@ function MutatorInterface:undoMutator(entity, entityVar, primedEntityVar, reproc
 				end, debug.traceback)
 
 				if not success then
-					Logger:BasicError("Failed to undo %s - %s", mutatorName, error)
+					Logger:BasicError("Failed to undo %s on %s - %s", mutatorName, entityName, error)
 				else
 					if not primedEntityVar or not primedEntityVar.appliedMutators[mutatorName] then
 						Logger:BasicTrace("Finalized undo as it's not queued up to be applied")
@@ -313,8 +313,7 @@ As of this writing, end users don't have to really care about this, as it's acco
 			for version, changelogEntry in TableUtils:OrderedPairs(changelog, function(key, value)
 				-- To Sort Descending Order
 				local M, m, p = key:match("^(%d+)%.(%d+)%.(%d+)$")
-				M, m, p = tonumber(M), tonumber(m), tonumber(p)
-				return -1 * (M + m + p)
+				return -1 * tonumber(M .. m .. p)
 			end) do
 				if version == currentVer then
 					version = version .. " (Current)"
