@@ -13,6 +13,13 @@
               <attribute id="UUID" type="FixedString" value="ad95bd1c-1a80-45fb-b73b-9eea1f8e58d0" />
               <attribute id="Version64" type="int64" value="36591746972385281" />
             </node>
+            <node id="ModuleShortDesc">
+              <attribute id="Folder" type="LSWString" value="Mazzle_Lib" />
+              <attribute id="MD5" type="LSString" value="" />
+              <attribute id="Name" type="FixedString" value="Mazzle_Lib" />
+              <attribute id="UUID" type="FixedString" value="96bc14a7-733e-4bea-859d-3695d745efc1" />
+              <attribute id="Version64" type="int64" value="36310276290641921" />
+            </node>
           </children>
         </node>
         <node id="ModuleInfo">
