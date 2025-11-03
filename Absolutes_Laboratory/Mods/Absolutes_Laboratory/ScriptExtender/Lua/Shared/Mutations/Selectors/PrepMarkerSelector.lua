@@ -78,7 +78,7 @@ function PrepMarkerSelector:predicate(selector)
 		local appliedCategories = {}
 		for i, mProfileRule in ipairs(activeProfile.prepPhaseMutations) do
 			local mutation = MutationConfigurationProxy.folders[mProfileRule.mutationFolderId].mutations[mProfileRule.mutationId]
-			if not mutation then
+			if mutation then
 				mutation = mutation._real or mutation
 
 				---@type PrepMarkerCategory[]
