@@ -524,22 +524,26 @@ This logic will be run recursively, applying the lists linked to the linked list
 
 		for s, listId in ipairs(self.activeList.linkedLists) do
 			local spellList = MutationConfigurationProxy.lists[self.configKey][listId]
+			if spellList then
+				local delete = Styler:ImageButton(linkedCell:AddImageButton("delete" .. spellList.name, "ico_red_x", { 16, 16 }))
+				delete.Disabled = self.activeList.modId ~= nil
+				delete.OnClick = function()
+					self.activeList.linkedLists[s].delete = true
+					TableUtils:ReindexNumericTable(self.activeList.linkedLists)
+					buildTable()
+				end
 
-			local delete = Styler:ImageButton(linkedCell:AddImageButton("delete" .. spellList.name, "ico_red_x", { 16, 16 }))
-			delete.Disabled = self.activeList.modId ~= nil
-			delete.OnClick = function()
-				self.activeList.linkedLists[s].delete = true
-				TableUtils:ReindexNumericTable(self.activeList.linkedLists)
-				buildTable()
-			end
-
-			local link = linkedCell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (from %s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
-			link.Font = "Small"
-			link.SameLine = true
-			link.OnClick = function()
-				self:launch(listId)
+				local link = linkedCell:AddTextLink(spellList.name .. (spellList.modId and string.format(" (from %s)", Ext.Mod.GetMod(spellList.modId).Info.Name) or ""))
+				link.Font = "Small"
+				link.SameLine = true
+				link.OnClick = function()
+					self:launch(listId)
+				end
+			elseif not self.activeList.modId then
+				self.activeList.linkedLists[s] = nil
 			end
 		end
+		TableUtils:ReindexNumericTable(self.activeList.linkedLists)
 	end
 	buildTable()
 
@@ -2150,6 +2154,12 @@ end
 ---@return {[string]: MazzleDocsContentItem}
 function ListDesignerBaseClass:generateChangelog()
 	return {
+		["1.8.1"] = {
+			type = "Bullet",
+			text = {
+				"Fix error when a linked list doesn't exist, purging it from the config",
+			}
+		},
 		["1.7.1"] = {
 			type = "Bullet",
 			text = {
