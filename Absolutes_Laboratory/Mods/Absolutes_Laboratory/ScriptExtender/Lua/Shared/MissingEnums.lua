@@ -17,3 +17,35 @@ CooldownType = {
 	[6] = "OncePerRestPerItem",
 	[7] = "OncePerShortRestPerItem",
 }
+
+---@enum ActualSlot
+SlotEnum = {
+	Helmet = 1,
+	Cloak = 2,
+	Breast = 3,
+	Gloves = 4,
+	Boots = 5,
+	Amulet = 6,
+	Ring1 = 7,
+	Ring2 = 8,
+	LightSource = 9,
+	MusicalInstrument = 10,
+	["Melee Main Weapon"] = 11,
+	["Ranged Main Weapon"] = 12,
+	["Melee Offhand Weapon"] = 13,
+	["Ranged Offhand Weapon"] = 14,
+	[1] = "Helmet",
+	[2] = "Cloak",
+	[3] = "Breast",
+	[4] = "Gloves",
+	[5] = "Boots",
+	[6] = "Amulet",
+	[7] = "Ring1",
+	[8] = "Ring2",
+	[9] = "LightSource",
+	[10] = "MusicalInstrument",
+	[11] = "Melee Main Weapon",
+	[12] = "Ranged Main Weapon",
+	[13] = "Melee Offhand Weapon",
+	[14] = "Ranged Offhand Weapon"
+}

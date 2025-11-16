@@ -16,6 +16,7 @@ MutationModProxy.Filename = "AbsolutesLaboratory_ProfilesAndMutations"
 ---@field folders {[Guid] : string}
 ---@field lists LocalModCacheLists
 ---@field prepPhaseMarkers {[Guid] : PrepMarkerCategory}
+---@field equipmentSets {[Guid] : MutatorEquipmentSet}
 
 ---@type {[Guid] : LocalModCache}
 local modList = {}
@@ -54,6 +55,13 @@ local function setModProxyFields(tbl, key, target)
 			for markerId, prepPhaseMarker in pairs(mutationConfig.prepPhaseMarkers) do
 				prepPhaseMarker.modId = modId
 				rawset(MutationModProxy.ModProxy.prepPhaseMarkers, markerId, prepPhaseMarker)
+			end
+		end
+
+		if mutationConfig.equipmentSets then
+			for setId, equipmentSet in pairs(mutationConfig.equipmentSets) do
+				equipmentSet.modId = modId
+				rawset(MutationModProxy.ModProxy.equipmentSets, setId, equipmentSet)
 			end
 		end
 
@@ -105,6 +113,19 @@ MutationModProxy.ModProxy = {
 		__mode = "k",
 		__index = function(t, k)
 			return setModProxyFields(t, k, "prepPhaseMarkers")
+		end,
+		__call = function(t)
+			MutationModProxy:ImportMutationsFromMods()
+			return TableUtils:CountElements(modList)
+		end,
+		__pairs = function(t)
+			return pairs(modList)
+		end
+	}),
+	equipmentSets = setmetatable({}, {
+		__mode = "k",
+		__index = function(t, k)
+			return setModProxyFields(t, k, "equipmentSets")
 		end,
 		__call = function(t)
 			MutationModProxy:ImportMutationsFromMods()
@@ -214,6 +235,13 @@ function MutationModProxy:ImportMutationsFromMods()
 					modEntry.prepPhaseMarkers = {}
 					for markerId, markerObject in pairs(mutations.prepPhaseMarkers) do
 						modEntry.prepPhaseMarkers[markerId] = markerObject
+					end
+				end
+
+				if mutations.equipmentSets and next(mutations.equipmentSets) then
+					modEntry.equipmentSets = {}
+					for setId, set in pairs(mutations.equipmentSets) do
+						modEntry.equipmentSets[setId] = set
 					end
 				end
 

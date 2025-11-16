@@ -298,5 +298,37 @@ ConfigurationStructure.config.mutations.lists = {
 	---@type {[Guid]: CustomList}
 	statusLists = {}
 }
+--#endregion
+
+--#region Equipment
+---@type {[Guid]: MutatorEquipmentSet}
+ConfigurationStructure.config.mutations.equipmentSets = {}
+
+---@class MutatorEquipmentSet
+ConfigurationStructure.DynamicClassDefinitions.equipmentSet = {
+	name = "",
+	description = "",
+	icon = "",
+	---@type ActualSlot
+	slot = "",
+	---@type Guid?
+	modId = nil,
+	---@type number|GameLevel
+	minLevel = 0,
+	---@type number|GameLevel
+	maxLevel = 0,
+	---@type ModDependencies
+	modDependencies = nil,
+	---@type MutatorEquipmentSetItem[]
+	items = {}
+}
+
+---@class MutatorEquipmentSetItem
+ConfigurationStructure.DynamicClassDefinitions.equipmentSetItem = {
+	---@type integer
+	weight = 1,
+	templateId = "",
+	cachedName = "",
+}
 
 --#endregion

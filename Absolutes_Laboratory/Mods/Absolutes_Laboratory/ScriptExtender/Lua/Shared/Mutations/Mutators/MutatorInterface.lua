@@ -213,6 +213,7 @@ Ext.Require("Shared/Mutations/Mutators/HealthMutator.lua")
 Ext.Require("Shared/Mutations/Mutators/AbilitiesMutator.lua")
 Ext.Require("Shared/Mutations/Mutators/BoostsMutator.lua")
 Ext.Require("Shared/Mutations/Mutators/ProgressionsMutator.lua")
+Ext.Require("Shared/Mutations/Mutators/EquipmentMutator.lua")
 
 ---@param existingSlides MazzleDocsSlide[]?
 ---@return MazzleDocsSlide[]?

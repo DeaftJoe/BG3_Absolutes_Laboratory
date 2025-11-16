@@ -44,6 +44,20 @@ MutationConfigurationProxy = {
 			end)
 		end
 	}),
+	equipmentSets = setmetatable({}, {
+		__index = function(t, k)
+			return MutationModProxy.ModProxy.folders[k] or mutationsConfig.mutations.folders[k]
+		end,
+		__pairs = function(t)
+			local combined = {}
+
+			for id, set in TableUtils:CombinedPairs(mutationsConfig.mutations.equipmentSets, MutationModProxy.ModProxy.equipmentSets) do
+				combined[id] = set
+			end
+
+			return pairs(combined)
+		end
+	}),
 	lists = {
 		spellLists = setmetatable({}, {
 			__index = function(t, k)

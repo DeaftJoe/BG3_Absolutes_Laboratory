@@ -1,7 +1,7 @@
 ---@class HealthMutatorClass : MutatorInterface
 HealthMutator = MutatorInterface:new("Health")
 HealthMutator.affectedComponents = {
-	"Health",
+	"BoostsContainer",
 }
 
 function HealthMutator:priority()

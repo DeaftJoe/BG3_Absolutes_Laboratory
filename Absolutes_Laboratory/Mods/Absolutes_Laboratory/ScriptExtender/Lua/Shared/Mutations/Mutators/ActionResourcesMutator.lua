@@ -1,7 +1,7 @@
 ---@class ActionResourcesMutatorImpl : MutatorInterface
 ActionResourcesMutator = MutatorInterface:new("Action Resources")
 ActionResourcesMutator.affectedComponents = {
-	"BoostsContainer"
+	"StatusContainer",
 }
 function ActionResourcesMutator:priority()
 	return self:recordPriority(ClassesAndSubclassesMutator:priority() + 1)

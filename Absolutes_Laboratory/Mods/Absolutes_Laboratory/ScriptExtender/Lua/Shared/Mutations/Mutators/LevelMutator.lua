@@ -1,7 +1,8 @@
 ---@class LevelMutatorClass : MutatorInterface
 LevelMutator = MutatorInterface:new("Character Level")
 LevelMutator.affectedComponents = {
-	"BoostsContainer"
+	"AvailableLevel",
+	"EocLevel"
 }
 
 function LevelMutator:priority()
