@@ -97,9 +97,9 @@ function EquipmentMutator:renderMutator(parent, mutator)
 				Ext.Timer.WaitFor(50, function()
 					---@type {[string]: ExtuiGroup}
 					local modGroups = { ["User"] = setList:AddGroup("User") }
-					modGroups["User"].PositionOffset = Styler:ScaleFactor({0, -30})
+					modGroups["User"].PositionOffset = Styler:ScaleFactor({ 0, -30 })
 
-					Styler:ScaledFont(modGroups["User"]:AddSeparatorText("Your Sets"), "Small"):SetStyle("SeparatorTextAlign", 0.2, 0.5)
+					Styler:ScaledFont(modGroups["User"]:AddSeparatorText("Your Sets"), "Small"):SetStyle("SeparatorTextAlign", 0.05, 0.5)
 
 					for setId, set in TableUtils:OrderedPairs(MutationConfigurationProxy.equipmentSets, function(key, value)
 							return not value.modId and ("0" .. value.name) or (Ext.Mod.GetMod(value.modId).Info.Name .. value.name)
@@ -119,7 +119,7 @@ function EquipmentMutator:renderMutator(parent, mutator)
 							groupParent = modGroups[set.modId]
 
 							Styler:ScaledFont(groupParent:AddSeparatorText(("Mod %s's Sets"):format(Ext.Mod.GetMod(set.modId).Info.Name)), "Small")
-								:SetStyle("SeparatorTextAlign", 0.2, 0.5)
+								:SetStyle("SeparatorTextAlign", 0.05, 0.5)
 						end
 
 						local setButtonGroup = groupParent:AddChildWindow(setId)
@@ -128,7 +128,7 @@ function EquipmentMutator:renderMutator(parent, mutator)
 							((#groupParent.Children - 1) % (math.floor(measuringWindow.LastSize[1] / (58 * Styler:ScaleFactor())))) ~= 0
 
 						Styler:MiddleAlignedColumnLayout(setButtonGroup, function(ele)
-							local setButton = ele:AddImageButton(setId, set.icon, Styler:ScaleFactor({ 48, 48 }))
+							local setButton = Styler:ImageButton(ele:AddImageButton(setId, set.icon, Styler:ScaleFactor({ 48, 48 })))
 							if set.modId then
 								setButton:Tooltip():AddText(("\t Left Click to select for slot %s. Can't edit as this set is sourced from a mod"):format(slotName))
 							else
@@ -191,11 +191,15 @@ function EquipmentMutator:renderMutator(parent, mutator)
 										icons = {}
 										if slotName:find("Melee") then
 											for _, icon in TableUtils:CombinedPairs(iconCache["Melee Main Weapon"], iconCache["Melee Offhand Weapon"]) do
-												table.insert(icons, icon)
+												if not TableUtils:IndexOf(icons, icon) then
+													table.insert(icons, icon)
+												end
 											end
 										else
 											for _, icon in TableUtils:CombinedPairs(iconCache["Ranged Main Weapon"], iconCache["Ranged Offhand Weapon"]) do
-												table.insert(icons, icon)
+												if not TableUtils:IndexOf(icons, icon) then
+													table.insert(icons, icon)
+												end
 											end
 										end
 
@@ -240,6 +244,32 @@ function EquipmentMutator:renderMutator(parent, mutator)
 
 									iconSearchInput.OnChange = function()
 										buildResults(iconSearchInput.Text)
+									end
+
+									---@param select ExtuiSelectable
+									popup:AddSelectable("Delete Set", "DontClosePopups").OnClick = function(select)
+										if select.Label ~= "Delete Set" then
+											for _, folder in pairs(ConfigurationStructure.config.mutations.folders) do
+												for _, mutation in pairs(folder.mutations) do
+													for _, mutator in pairs(mutation.mutators) do
+														if mutator.targetProperty == self.name then
+															---@cast mutator EquipmentMutator
+															for slot, otherSetId in pairs(mutator.values) do
+																if otherSetId == setId then
+																	mutator.values[slot] = nil
+																end
+															end
+														end
+													end
+												end
+											end
+											ConfigurationStructure.config.mutations.equipmentSets[setId].delete = true
+											self:renderMutator(parent, mutator)
+										else
+											select.Label = "Are You Sure? This Will Delete It From All Mutators"
+											Styler:Color(select, "ErrorText")
+											select.DontClosePopups = false
+										end
 									end
 								end
 							end
