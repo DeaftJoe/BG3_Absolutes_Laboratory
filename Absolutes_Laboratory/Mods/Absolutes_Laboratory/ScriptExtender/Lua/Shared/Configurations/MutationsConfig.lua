@@ -313,6 +313,7 @@ ConfigurationStructure.DynamicClassDefinitions.equipmentSet = {
 	slot = "",
 	---@type Guid?
 	modId = nil,
+	characterLevel = true,
 	---@type number|GameLevel
 	minLevel = 0,
 	---@type number|GameLevel

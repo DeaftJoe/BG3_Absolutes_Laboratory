@@ -46,7 +46,7 @@ MutationConfigurationProxy = {
 	}),
 	equipmentSets = setmetatable({}, {
 		__index = function(t, k)
-			return MutationModProxy.ModProxy.folders[k] or mutationsConfig.mutations.folders[k]
+			return MutationModProxy.ModProxy.equipmentSets[k] or mutationsConfig.mutations.equipmentSets[k]
 		end,
 		__pairs = function(t)
 			local combined = {}
