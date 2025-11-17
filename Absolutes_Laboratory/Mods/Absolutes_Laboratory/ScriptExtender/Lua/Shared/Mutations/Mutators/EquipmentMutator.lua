@@ -63,7 +63,7 @@ function EquipmentMutator:renderMutator(parent, mutator)
 
 		local setGroup = row:AddGroup("SetSelect")
 		local equipmentSlotButton = Styler:ImageButton(setGroup:AddImageButton(slotName, activeSet and activeSet.icon or equipmentSlots[slotName], Styler:ScaleFactor({ 48, 48 })))
-		local tooltip = slotName .. "\nLeft-Click to toggle set selection, Right-Click for options"
+		local tooltip = slotName
 		if activeSet then
 			tooltip = tooltip .. ("\nName: %s\nDescription: %s"):format(activeSet.name, activeSet.description or "N/A")
 			if activeSet.modId then
@@ -123,19 +123,26 @@ function EquipmentMutator:renderMutator(parent, mutator)
 						end
 
 						local setButtonGroup = groupParent:AddChildWindow(setId)
-						setButtonGroup.Size = Styler:ScaleFactor({ Styler:calculateTextDimensions(set.name, 100), 100 })
+						local textWidth = Styler:calculateTextDimensions(set.name, 100)
+
+						setButtonGroup.Size = Styler:ScaleFactor({ math.min(200, textWidth), 100 })
 						setButtonGroup.SameLine = #groupParent.Children > 2 and
-							((#groupParent.Children - 1) % (math.floor(measuringWindow.LastSize[1] / (58 * Styler:ScaleFactor())))) ~= 0
+							((#groupParent.Children - 1) % (math.floor(measuringWindow.LastSize[1] / (200 * Styler:ScaleFactor())))) ~= 0
 
 						Styler:MiddleAlignedColumnLayout(setButtonGroup, function(ele)
 							local setButton = Styler:ImageButton(ele:AddImageButton(setId, set.icon, Styler:ScaleFactor({ 48, 48 })))
 							if set.modId then
-								setButton:Tooltip():AddText(("\t Left Click to select for slot %s. Can't edit as this set is sourced from a mod"):format(slotName))
+								setButton.OnRightClick = function()
+									self:renderSetBuilder(buildGroup, set)
+								end
 							else
-								setButton:Tooltip():AddText(("\t Left Click to select for slot %s, Right Click for Options\n%s\n%s"):format(slotName, set.name, set.description))
 								setButton.OnRightClick = function()
 									popup:Open()
 									Helpers:KillChildren(popup)
+
+									popup:AddSelectable("Manage Set").OnClick = function()
+										self:renderSetBuilder(buildGroup, set)
+									end
 
 									FormBuilder:CreateForm(popup:AddMenu("Edit Name/Description"), function(formResults)
 											set.name = formResults.Name
@@ -320,6 +327,11 @@ function EquipmentMutator:renderMutator(parent, mutator)
 			equipmentSlotButton:OnClick()
 		end
 	end
+end
+
+---@param parent ExtuiTreeParent
+---@param set MutatorEquipmentSet
+function EquipmentMutator:renderSetBuilder(parent, set)
 end
 
 function EquipmentMutator:undoMutator(entity, entityVar)
