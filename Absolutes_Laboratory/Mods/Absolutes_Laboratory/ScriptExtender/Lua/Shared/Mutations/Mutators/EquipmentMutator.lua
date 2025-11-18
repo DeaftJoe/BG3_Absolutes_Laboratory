@@ -332,6 +332,10 @@ end
 ---@param parent ExtuiTreeParent
 ---@param set MutatorEquipmentSet
 function EquipmentMutator:renderSetBuilder(parent, set)
+	Helpers:KillChildren(parent)
+	parent.Visible = true
+
+	
 end
 
 function EquipmentMutator:undoMutator(entity, entityVar)
