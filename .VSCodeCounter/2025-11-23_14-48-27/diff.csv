@@ -1,0 +1,14 @@
+"filename", "language", "Lua", "comment", "blank", "total"
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\Inspector\CharacterInspector.lua", "Lua", 176, 16, 25, 217
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\Inspector\CharacterWindow.lua", "Lua", 0, 0, 1, 1
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\Mutations\ListDesignerBaseClass.lua", "Lua", 22, 0, 1, 23
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\Mutations\MutationExternalProfileUtility.lua", "Lua", 0, 0, 1, 1
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\Mutations\MutationProfileManager.lua", "Lua", 8, 0, 0, 8
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Client\RandomHelpers.lua", "Lua", 13, 6, 2, 21
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\EntityRecorder.lua", "Lua", -1, 0, 0, -1
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\Mutations\Mutators\ActionResourcesMutator.lua", "Lua", 7, 0, 1, 8
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\Mutations\Mutators\HealthMutator.lua", "Lua", 7, 0, 0, 7
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\Mutations\Mutators\LevelMutator.lua", "Lua", 3, 0, -1, 2
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\Mutations\Selectors\RaceSelector.lua", "Lua", 4, 0, 0, 4
+"d:\Mods\BG3 Modder MultiTool\Absolutes_Laboratory\Absolutes_Laboratory\Mods\Absolutes_Laboratory\ScriptExtender\Lua\Shared\Mutations\Selectors\SelectorInterface.lua", "Lua", 6, 0, 0, 6
+"Total", "-", 245, 22, 30, 297
