@@ -379,17 +379,13 @@ if Ext.IsServer() then
 					amountOfPartyMembers = amountOfPartyMembers - mutator.modifiers.basePartySize
 
 					if amountOfPartyMembers ~= 0 then
-						if amountOfPartyMembers < 0 then
-							offsetBasePerPartyMember = offsetBasePerPartyMember
-						end
-
 						Logger:BasicDebug(
 							"There are %d active, non-sitout party members (excluding host's starting character), compared to the base party size of %d, adding %d to the base level",
 							amountOfPartyMembers,
 							mutator.modifiers.basePartySize,
 							amountOfPartyMembers * offsetBasePerPartyMember)
 
-						baseLevel = baseLevel + (math.abs(amountOfPartyMembers) * offsetBasePerPartyMember)
+						baseLevel = baseLevel + (amountOfPartyMembers * offsetBasePerPartyMember)
 					end
 				end
 
@@ -622,6 +618,12 @@ end
 ---@return {[string]: MazzleDocsContentItem}
 function LevelMutator:generateChangelog()
 	return {
+		["1.8.4"] = {
+			type = "Bullet",
+			text = {
+				"Fix party-based scaling math when size of the party is below the base"
+			}
+		},
 		["1.8.2"] = {
 			type = "Bullet",
 			text = {
