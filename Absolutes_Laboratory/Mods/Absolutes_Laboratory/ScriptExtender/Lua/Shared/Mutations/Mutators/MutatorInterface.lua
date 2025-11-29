@@ -10,6 +10,13 @@ Ext.Vars.RegisterUserVariable(ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME, {
 	SyncToClient = true
 })
 
+ABSOLUTES_LABORATORY_MAXHP_VAR_NAME = "Absolutes_Laboratory_Entity_Original_MaxHp"
+Ext.Vars.RegisterUserVariable(ABSOLUTES_LABORATORY_MAXHP_VAR_NAME, {
+	Server = true,
+	Client = true,
+	SyncToClient = true
+})
+
 Ext.Vars.RegisterUserVariable("Absolutes_Laboratory_Undone_Components", {
 	Server = true,
 	Client = false,

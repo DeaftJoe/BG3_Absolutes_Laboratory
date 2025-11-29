@@ -416,66 +416,152 @@ function HealthMutator:previewResult(mutator)
 end
 
 function HealthMutator:applyMutator(entity, entityVar)
-	---@type HealthMutator[]
-	local mutators = entityVar.appliedMutators[self.name]
-	if not mutators[1] then
-		mutators = { mutators }
-	end
+	local requireSubscription = entityVar.appliedMutators[ClassesAndSubclassesMutator.name]
+	local function mutate()
+		local entityName = EntityRecorder:GetEntityName(entity)
+		local mTime = Ext.Timer:MonotonicTime()
+		if requireSubscription then
+			Logger:BasicDebug("==== Continuing mutator Health for entity %s_%s (subscribed to Health component change) ====", entityName, entity.Uuid.EntityUuid)
+		end
+		---@type HealthMutator[]
+		local mutators = entityVar.appliedMutators[self.name]
+		if not mutators[1] then
+			mutators = { mutators }
+		end
 
-	entityVar.originalValues[self.name] = {
-		healthPercentage = 1 - (entity.Health.Hp / entity.Health.MaxHp)
-	}
+		if not entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME] then
+			--Original MaxHP is necessary to negate class HP scaling via HealthMutator application
+			--HealthMutator must execute after ClassesAndSubclassesMutator (which should have set this variable) to behave as expected
+			entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME] = entity.Health.MaxHp
+		end
 
-	local percentageToAdd = 0
+		--remove blank boost applied during subscription process
+		Osi.RemoveBoosts(entity.Uuid.EntityUuid, "IncreaseMaxHP(0)", 1, entity.Uuid.EntityUuid, entity.Uuid.EntityUuid)
 
-	for _, mutator in TableUtils:OrderedPairs(mutators, function(key, value)
-		return value.staticHealth and 1 or 2
-	end) do
-		if mutator.values then
-			---@type Character
-			local charStat = Ext.Stats.Get(entity.Data.StatsId)
-
-			---@type number?
-			local xPRewardMod = 0
-			if charStat.XPReward then
-				xPRewardMod = calculateXPRewardLevelModifier(mutator.modifiers["XPReward"], charStat.XPReward)
-			end
-
-			local gameLevelMod = entity.Level and calculateGameLevelModifier(mutator.modifiers["GameLevel"], entity.Level.LevelName) or 0
-			local characterMod = calculateCharacterLevelModifier(mutator.modifiers["CharacterLevel"], entity.AvailableLevel.Level)
-
-			local baseHp = percentageToAdd > 0 and percentageToAdd or entity.Health.MaxHp
-			local dynamicPercentage = (mutator.values + (characterMod + gameLevelMod + xPRewardMod)) / 100
-
-			percentageToAdd = baseHp + math.floor(baseHp * dynamicPercentage)
-
-			Logger:BasicDebug(
-				"Dynamic calculation will increase max health of %d by %s%% to a value of %d (base: %s%%, character: %s%%, gameLevel: %s%%, xpReward: %s%%)",
-				baseHp,
-				(mutator.values + (characterMod + gameLevelMod + xPRewardMod)),
-				percentageToAdd,
-				mutator.values,
-				characterMod,
-				gameLevelMod,
-				xPRewardMod
-			)
+		local temp = Osi.GetMaxHitpoints(entity.Uuid.EntityUuid)
+		if entityVar.originalValues[self.name] and entityVar.originalValues[self.name].didUndo then
+			--An undo was performed on the health mutator for this entity, so we shouldn't recalculate healthDelta
+			entityVar.originalValues[self.name].didUndo = false
 		else
-			percentageToAdd = mutator.staticHealth
-			Logger:BasicDebug("Static Calculation will change max health from %d to %d",
-				entity.Health.MaxHp,
-				mutator.staticHealth)
+			entityVar.originalValues[self.name] = {
+				healthPercentage = 1 - (entity.Health.Hp / entity.Health.MaxHp),
+				healthDelta = entity.Health.MaxHp - entity.Health.Hp
+			}
+		end
+
+		local percentageToAdd = 0
+
+		for _, mutator in TableUtils:OrderedPairs(mutators, function(key, value)
+			return value.staticHealth and 1 or 2
+		end) do
+			if mutator.values then
+				---@type Character
+				local charStat = Ext.Stats.Get(entity.Data.StatsId)
+
+				---@type number?
+				local xPRewardMod = 0
+				if charStat.XPReward then
+					xPRewardMod = calculateXPRewardLevelModifier(mutator.modifiers["XPReward"], charStat.XPReward)
+				end
+
+				local gameLevelMod = entity.Level and calculateGameLevelModifier(mutator.modifiers["GameLevel"], entity.Level.LevelName) or 0
+				local characterMod = calculateCharacterLevelModifier(mutator.modifiers["CharacterLevel"], entity.AvailableLevel.Level)
+
+				local baseHp = percentageToAdd > 0 and percentageToAdd or entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME]
+				local dynamicPercentage = (mutator.values + (characterMod + gameLevelMod + xPRewardMod)) / 100
+
+				percentageToAdd = baseHp + math.floor(baseHp * dynamicPercentage)
+
+				Logger:BasicDebug(
+					"Dynamic calculation will increase max health of %d by %s%% to a value of %d (base: %s%%, character: %s%%, gameLevel: %s%%, xpReward: %s%%)",
+					baseHp,
+					(mutator.values + (characterMod + gameLevelMod + xPRewardMod)),
+					percentageToAdd,
+					mutator.values,
+					characterMod,
+					gameLevelMod,
+					xPRewardMod
+				)
+			else
+				percentageToAdd = mutator.staticHealth
+				Logger:BasicDebug("Static Calculation will change max health from %d to %d",
+					entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME],
+					mutator.staticHealth)
+			end
+		end
+
+		local boostString = ("IncreaseMaxHP(%d)"):format(math.floor(percentageToAdd - entity.Health.MaxHp))
+		entityVar.originalValues[self.name].boost = boostString
+
+		Osi.AddBoosts(entity.Uuid.EntityUuid, boostString, entity.Uuid.EntityUuid, entity.Uuid.EntityUuid)
+		Logger:BasicDebug("Applied boost %s", boostString)
+--[[
+		By the time this executes, we expect the entity's max HP to match the value we calculated for it during applyMutator.
+		* If max hp matches our calculated value, then we perform the current hp manipulation immediately.
+		* If max hp doesn't match our calculated value, we subscribe to Health component changes until it does match. We then apply the current hp change and close the subscription.
+		Which of these cases applies is dependent on how quickly our earlier Osi.AddBoosts executes. Realistically it's almost impossible that case 1 occurs as we're hogging the main thread right now.
+]]
+		local calculatedMaxHp = percentageToAdd
+		local healthDelta = entityVar.originalValues[self.name].healthDelta
+		if entity.Health.Hp ~= 0 and healthDelta then
+			Logger:BasicDebug("Manually updating %s (%s) current health of %d to %d, approximating original healthDelta",
+					entityName,
+					entity.Uuid.EntityUuid,
+					calculatedMaxHp,
+					math.max(1, calculatedMaxHp - healthDelta))
+			if entity.Health.MaxHp ~= calculatedMaxHp then
+				local sub1
+				---@diagnostic disable-next-line: param-type-mismatch
+				sub1 = Ext.Entity.Subscribe("Health", function(health, _, _)
+					if (health.Health.MaxHp == calculatedMaxHp) then
+						-- Restore HP after the engine applies its changes
+						Ext.Timer.WaitFor(50, function()
+							health.Health.Hp = math.max(1, health.Health.MaxHp - healthDelta) --don't kill him!
+							health:Replicate("Health")
+							Ext.Entity.Unsubscribe(sub1) -- unsubscribe immediately
+						end)
+					end
+				end, entity)
+				Logger:BasicDebug("Health component subscription registered to handle manual update.")
+			else
+				-- Somehow our change to MaxHp already applied, so we don't need to set a subscription.
+				entity.Health.Hp = entity.Health.MaxHp - healthDelta
+				entity:Replicate("Health")
+			end
+		end
+		if requireSubscription then
+			Logger:BasicDebug("==== Finished mutator Health in %dms ====", Ext.Timer:MonotonicTime() - mTime)
 		end
 	end
 
-	local boostString = ("IncreaseMaxHP(%d)"):format(math.floor(percentageToAdd - entity.Health.MaxHp))
-	entityVar.originalValues[self.name].boost = boostString
-
-	Osi.AddBoosts(entity.Uuid.EntityUuid, boostString, entity.Uuid.EntityUuid, entity.Uuid.EntityUuid)
-	Logger:BasicDebug("Applied boost %s", boostString)
+	if requireSubscription then
+		Logger:BasicDebug("Delaying mutator until Health component updates (Mutator %s recalculates max hp).", ClassesAndSubclassesMutator.name)
+		local sub
+		---@diagnostic disable-next-line: param-type-mismatch
+		sub = Ext.Entity.Subscribe("Health", function(_, _, _)
+			Ext.Entity.Unsubscribe(sub) -- unsubscribe immediately
+			-- Execute health mutator after we force a max hp update
+			Ext.Timer.WaitFor(50, function()
+				mutate()
+			end)
+		end, entity)
+		local boostString = "IncreaseMaxHP(0)"
+		Osi.AddBoosts(entity.Uuid.EntityUuid, boostString, entity.Uuid.EntityUuid, entity.Uuid.EntityUuid)
+	else
+		mutate()
+	end
 end
 
 function HealthMutator:undoMutator(entity, entityVar)
 	if type(entityVar.originalValues[self.name]) == "table" then
+		local boostString = entityVar.originalValues[self.name].boost
+		--Undoing a negative HP boost results in relative HP values being lost, so we capture those values here.
+		entityVar.originalValues[self.name] = {
+				healthPercentage = 1 - (entity.Health.Hp / entity.Health.MaxHp),
+				healthDelta = entity.Health.MaxHp - entity.Health.Hp,
+				boost = boostString,
+				didUndo = true
+		}
 		Logger:BasicDebug("Removing Health Boost %s", entityVar.originalValues[self.name].boost)
 		Osi.RemoveBoosts(entity.Uuid.EntityUuid, entityVar.originalValues[self.name].boost, 0, entity.Uuid.EntityUuid, entity.Uuid.EntityUuid)
 	else
@@ -484,26 +570,8 @@ function HealthMutator:undoMutator(entity, entityVar)
 end
 
 function HealthMutator:FinalizeMutator(entity)
-	Ext.Timer.WaitFor(200, function()
-		---@type MutatorEntityVar
-		local entityVar = entity.Vars[ABSOLUTES_LABORATORY_MUTATIONS_VAR_NAME]
-
-		if entityVar then
-			local healthPercentage = entityVar.originalValues[self.name].healthPercentage
-
-			if healthPercentage ~= (1 - (entity.Health.Hp / entity.Health.MaxHp)) then
-				Logger:BasicDebug("Manually updating %s (%s) current health of %d to %d, matching the original percentage of %d%%",
-					EntityRecorder:GetEntityName(entity),
-					entity.Uuid.EntityUuid,
-					entity.Health.Hp,
-					entity.Health.MaxHp - math.max(0, math.floor((entity.Health.MaxHp * healthPercentage))),
-					math.min(100, (1 + healthPercentage) * 100))
-
-				entity.Health.Hp = entity.Health.MaxHp - math.max(0, math.floor((entity.Health.MaxHp * healthPercentage)))
-				entity:Replicate("Health")
-			end
-		end
-	end)
+	--Nothing common between apply and undo to finalize.
+	--If apply didn't require timers or subscriptions, we could have moved entity:Replicate("Health") here
 end
 
 ---@return MazzleDocsDocumentation

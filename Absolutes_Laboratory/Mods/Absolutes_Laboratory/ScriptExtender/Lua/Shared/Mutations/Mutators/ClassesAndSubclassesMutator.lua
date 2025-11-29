@@ -452,6 +452,13 @@ function ClassesAndSubclassesMutator:applyMutator(entity, entityVar)
 	end
 	---@cast classesMutators ClassesAndSubclassesMutator[]
 
+	if not entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME] then
+		--Original MaxHP is necessary to negate class HP scaling via HealthMutator application
+		--HealthMutator must execute after ClassesAndSubclassesMutator to behave as expected
+		entity.Vars[ABSOLUTES_LABORATORY_MAXHP_VAR_NAME] = entity.Health.MaxHp
+		Logger:BasicDebug("storing original MaxHp of %d", entity.Health.MaxHp)
+	end
+
 	---@type ClassesConditionalGroup[]
 	local chosenClassGroups = {}
 
